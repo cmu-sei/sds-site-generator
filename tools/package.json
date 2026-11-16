@@ -1,0 +1,21 @@
+{
+  "name": "site-generator-development-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:highlight": "node build-highlight.mjs",
+    "test:components": "node components.test.mjs",
+    "test": "node --test search.test.mjs",
+    "audit": "node audit.mjs",
+    "test:search-ui": "node search-ui.test.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "chrome-launcher": "1.2.2",
+    "esbuild": "^0.28.2",
+    "lighthouse": "13.6.0",
+    "lucide-static": "^1.66.0",
+    "playwright": "1.64.1",
+    "shiki": "^4.6.0"
+  }
+}

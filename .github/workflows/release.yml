@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Validate and build release
+    uses: ./.github/workflows/check.yml
+
+  publish:
+    name: Publish tested package and binaries
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: github-packages
+    concurrency:
+      group: package-publication
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+      - run: npm install --global npm@12.2.1
+      - run: npm ci --ignore-scripts
+      - name: Verify release identity
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          identity="$(node scripts/package.mjs release "$RELEASE_TAG")"
+          dist_tag="$(node -e 'console.log(JSON.parse(process.argv[1]).distTag)' "$identity")"
+          echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-bundle
+          path: release-artifacts/
+      - name: Verify downloaded checksums
+        working-directory: release-artifacts
+        run: sha256sum --check SHA256SUMS
+      - name: Publish immutable npm tarball
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIST_TAG: ${{ steps.release.outputs.dist-tag }}
+        run: npm publish release-artifacts/*.tgz --ignore-scripts --tag "$DIST_TAG"
+      - name: Publish standalone binaries
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          DIST_TAG: ${{ steps.release.outputs.dist-tag }}
+        run: |
+          options=(--verify-tag --generate-notes)
+          if [[ "$DIST_TAG" == next ]]; then options+=(--prerelease --latest=false); fi
+          gh release create "$RELEASE_TAG" release-artifacts/* "${options[@]}"

@@ -1,0 +1,33 @@
+[package]
+name = "sds-site-generator"
+version = "0.1.0"
+edition = "2024"
+description = "A Markdown-first static documentation site generator with SDS Lite"
+publish = false
+
+[lib]
+name = "site_generator"
+
+[dependencies]
+anyhow = "1"
+ammonia = "4.2"
+clap = { version = "4", features = ["derive"] }
+flate2 = "1"
+imagesize = "0.14"
+image = { version = "0.25", default-features = false, features = ["tiff", "png"] }
+kuchiki = "0.8"
+percent-encoding = "2"
+pulldown-cmark = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml_ng = "0.10"
+tempfile = "3"
+tiny_http = "0.12"
+toml = "0.9"
+url = { version = "2", features = ["serde"] }
+xmltree = "0.12"
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

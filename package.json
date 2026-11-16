@@ -1,0 +1,45 @@
+{
+  "name": "@cmu-sei/sds-site-generator",
+  "version": "0.1.0",
+  "description": "A Markdown-first static documentation site generator with SDS Lite",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cmu-sei/sds-site-generator.git"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "sds-site-generator": "scripts/cli.mjs"
+  },
+  "files": [
+    "scripts/cli.mjs",
+    "scripts/platforms.mjs",
+    "native/",
+    "README.md",
+    "vendor/sds-lite/LICENSE",
+    "vendor/lucide-LICENSE",
+    "assets/highlight-LICENSE.txt"
+  ],
+  "scripts": {
+    "build": "node scripts/package.mjs build",
+    "build:site": "node scripts/cli.mjs build example",
+    "preview": "node scripts/cli.mjs preview example",
+    "check": "node scripts/cli.mjs check example",
+    "test": "node --test tests/package.test.mjs",
+    "test:rust": "cargo test --all-targets --locked",
+    "check:package": "node scripts/package.mjs verify",
+    "prepack": "npm run check:package"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "packageManager": "npm@12.2.1",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "devDependencies": {
+    "semver": "7.7.2",
+    "smol-toml": "1.9.1",
+    "yaml": "2.9.1"
+  }
+}

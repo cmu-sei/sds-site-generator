@@ -1,0 +1,184 @@
+name: Check
+on:
+  push:
+    branches: [main, 'hotfix/v*']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - id: matrix
+        run: echo "matrix=$(node scripts/package.mjs matrix)" >> "$GITHUB_OUTPUT"
+
+  native:
+    name: Native (${{ matrix.name }})
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUST_TARGET: ${{ matrix.target }}
+      EXECUTABLE: ${{ matrix.executable }}
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          architecture: ${{ matrix.arch }}
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci --ignore-scripts
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+      - name: Install the native musl linker
+        if: matrix.platform == 'linux'
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install --yes musl-tools
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --locked --target "$RUST_TARGET" -- -D warnings
+      - run: cargo test --all-targets --locked --target "$RUST_TARGET"
+      - run: cargo build --release --locked --target "$RUST_TARGET"
+      - run: node scripts/package.mjs stage "target/$RUST_TARGET/release/$EXECUTABLE"
+      - run: npm test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-${{ matrix.name }}
+          path: native/
+          if-no-files-found: error
+          retention-days: 7
+
+  package:
+    name: Assemble tested distribution
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.2.1
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: native-*
+          path: native/
+          merge-multiple: true
+      - name: Restore executable modes after artifact download
+        run: node scripts/package.mjs permissions
+      - run: npm run check:package
+      - run: npm test
+      - run: npm pack
+      - run: node scripts/package.mjs archives
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-bundle
+          path: release-artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  browser:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: stable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - run: npm install --global npm@12.2.1
+      - run: cargo build --locked
+      - run: target/debug/sds-site-generator build example
+      - run: npm ci --ignore-scripts
+        working-directory: tools
+      - run: npx playwright install --with-deps chromium
+        working-directory: tools
+      - run: npm test
+        working-directory: tools
+      - name: Audit generated site
+        shell: bash
+        run: |
+          target/debug/sds-site-generator new "$RUNNER_TEMP/audit-site" --url https://example.org/demo/
+          target/debug/sds-site-generator preview "$RUNNER_TEMP/audit-site" > "$RUNNER_TEMP/preview.log" 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/demo/ > /dev/null; then break; fi
+            if [[ "$attempt" == 30 ]]; then cat "$RUNNER_TEMP/preview.log"; exit 1; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4173/demo/ > /dev/null
+          cd tools
+          CHROME_PATH="$(node --input-type=module -e 'import { chromium } from "playwright"; console.log(chromium.executablePath())')"
+          export CHROME_PATH
+          npm run test:search-ui
+          npm run audit
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: lighthouse
+          path: tools/reports/
+
+  required:
+    name: Build and test
+    if: always()
+    needs: [native, package, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - env:
+          NATIVE_RESULT: ${{ needs.native.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: |
+          if [[ "$NATIVE_RESULT" != success || "$PACKAGE_RESULT" != success || "$BROWSER_RESULT" != success ]]; then
+            echo '::error::Native, package, and browser checks must all pass.'
+            exit 1
+          fi
