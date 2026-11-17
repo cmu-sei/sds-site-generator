@@ -6,11 +6,12 @@ Authors need one executable, not a web framework or a search service.
 
 ## Start here
 
-1. [Create and preview a site](guides/start/getting-started.md).
-2. Set the name, publishing URL, and menu in [site.toml](guides/start/configuration.md).
-3. [Organize pages and links](guides/authoring/structure.md).
-4. [Write Markdown](guides/authoring/markdown.md) and add [images and downloads](guides/authoring/assets.md).
-5. [Validate and publish](guides/publishing/deployment.md).
+1. [Install the generator](guides/start/installation.md) for macOS, Linux, or Windows.
+2. [Create and preview a site](guides/start/getting-started.md).
+3. Set the name, publishing URL, and menu in [site.toml](guides/start/configuration.md).
+4. [Organize pages and links](guides/authoring/structure.md).
+5. [Write Markdown](guides/authoring/markdown.md) and add [images and downloads](guides/authoring/assets.md).
+6. [Validate and publish](guides/publishing/deployment.md).
 
 Already have a Markdown site? Read [importing existing content](guides/maintenance/importing.md).
 The [complete user guide](guides/index.md) is a quick reference to every topic.
