@@ -1,0 +1,30 @@
+name = "SDS Site Generator"
+url = "https://cmu-sei.github.io/sds-site-generator/"
+language = "en"
+description = "Write, preview, and publish a documentation website from Markdown."
+compatibility = false
+repository = "https://github.com/cmu-sei/sds-site-generator"
+
+[[navigation]]
+title = "Home"
+path = "/"
+
+[[navigation]]
+title = "User guide"
+path = "/guides/"
+
+[[navigation.children]]
+title = "Start here"
+path = "/guides/start/"
+
+[[navigation.children]]
+title = "Write content"
+path = "/guides/authoring/"
+
+[[navigation.children]]
+title = "Publish and operate"
+path = "/guides/publishing/"
+
+[[navigation.children]]
+title = "Maintain and migrate"
+path = "/guides/maintenance/"

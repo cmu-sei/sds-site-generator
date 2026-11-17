@@ -1,0 +1,11 @@
+Documentation author checklist
+
+[ ] Set the real name and publishing URL in site.toml.
+[ ] Give each page one main heading and an introductory paragraph.
+[ ] Keep heading levels consecutive.
+[ ] Check links to pages, heading fragments, and public assets.
+[ ] Write meaningful image descriptions; compress images to at most 1 MiB.
+[ ] Run sds-site-generator check . --strict.
+[ ] Run sds-site-generator build .
+[ ] Publish the contents of dist/, including dotfiles.
+[ ] Test the deployed site, search, downloads, mobile layout, and keyboard use.

@@ -285,7 +285,7 @@ impl Page {
         if metadata.draft {
             return Ok(None);
         }
-        let (document, changes) = markup::markdown(markdown)?;
+        let (document, changes) = markup::markdown(markdown, config.compatibility)?;
         for change in changes {
             issue(config, diagnostics, &file, offset + 1, change)?;
         }

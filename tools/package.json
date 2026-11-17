@@ -5,6 +5,7 @@
   "scripts": {
     "build:highlight": "node build-highlight.mjs",
     "test:components": "node components.test.mjs",
+    "test:highlight": "node --test highlight.test.mjs",
     "test": "node --test search.test.mjs",
     "audit": "node audit.mjs",
     "test:search-ui": "node search-ui.test.mjs"

@@ -12,7 +12,7 @@ and three hashes for subsections. Do not skip heading levels.
 
 Link to other Markdown files using their relative filenames:
 
-::code-block{quality="good"}
+::code-block
 ```markdown
 [Publishing](publishing.md)
 [Home](../index.md)
@@ -26,9 +26,11 @@ The generator checks page and heading links before publishing.
 
 Place images in the public directory and describe them in the image text:
 
+::code-block
 ```markdown
 ![A diagram showing the review process](/images/review.png)
 ```
+::
 
 For a purely decorative image, use an empty description and the title
 `"decorative"`. Local PNG, JPEG, GIF, WebP, AVIF, and sanitized SVG images are supported.
@@ -40,6 +42,7 @@ publishing; the generator does not optimize images for you.
 You do not need metadata for normal pages. YAML front matter between `---`
 lines and TOML between `+++` lines are both supported:
 
+::code-block
 ```yaml
 ---
 title: Writing guide
@@ -49,10 +52,12 @@ navigation:
 tags: [documentation]
 ---
 ```
+::
 
 YAML accepts additional metadata such as tags. Use `navigation: false` to hide
 a page from navigation without unpublishing it. The TOML equivalent is:
 
+::code-block
 ```toml
 +++
 title = "A shorter navigation title"
@@ -61,16 +66,42 @@ order = 2
 draft = false
 +++
 ```
+::
 
 Unknown TOML settings cause an error. Fenced YAML examples in the page body
 are ordinary code examples, not metadata.
 
 ## Code examples
 
-The link example above uses a built-in code-example element. Wrap a fenced
-code block with `::code-block{quality="good"}` and a closing `::` line.
-Use `quality="bad"` for a noncompliant example. Examples render without
-JavaScript; a small first-party web component adds the copy button.
+The examples above use the shared code-block element. Wrap a fenced code block
+with `::code-block` and a closing `::` line. The default treatment is neutral;
+use `quality="good"` or `quality="bad"` for compliant/noncompliant examples.
+Examples render without JavaScript; the shared SDS runtime adds copy and
+fullscreen controls.
+
+Put a lowercase language label on the opening fence to select syntax
+highlighting, for example `markdown`, `toml`, `powershell`, or `ini`.
+The bundled grammars also cover C, C++, Java, Perl, free-form Fortran,
+JavaScript, TypeScript, Python, shell, HTML, XML, JSON, YAML, and diff, with
+CSS, GLSL, SQL, regular-expression, and C++ macro dependency grammars.
+Use `text` or no label for plain text; unknown labels are not highlighted.
+Highlighting requires JavaScript and uses local assets, not an external service.
+
+## Callouts
+
+Use semantic tones and visual variants matching SDS Lite:
+
+::code-block
+```markdown
+::callout{tone="warning" variant="outline" size="sm"}
+**Warning:** Check local links before publishing.
+::
+```
+::
+
+Tones are `neutral` (default), `accent`, `info`, `success`, `warning`, and
+`danger`. Omit `variant` for a subtle surface, or use `outline` or `bold`.
+Sizes are `xs`, `sm`, `md` (default), and `lg`.
 
 ## Importing existing content
 

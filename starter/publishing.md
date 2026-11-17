@@ -9,10 +9,12 @@ Include a subdirectory if you use one, such as https://example.org/my-docs/.
 
 ## Check and build
 
+::code-block
 ```sh
 sds-site-generator check .
 sds-site-generator build .
 ```
+::
 
 Upload the contents of dist to your host. For GitHub Pages, use an Actions
 deployment and upload dist as the Pages artifact.

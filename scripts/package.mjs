@@ -53,7 +53,7 @@ export function verifyBundle(directory = root) {
       throw new Error(`Binary is not executable: ${selected.platform}/${selected.arch}.`)
     }
   }
-  for (const file of ['scripts/cli.mjs', 'scripts/platforms.mjs', 'vendor/sds-lite/LICENSE', 'vendor/lucide-LICENSE', 'assets/highlight-LICENSE.txt']) {
+  for (const file of ['LICENSE', 'scripts/cli.mjs', 'scripts/platforms.mjs', 'vendor/sds-lite/LICENSE', 'vendor/lucide-LICENSE', 'assets/highlight-LICENSE.txt']) {
     if (!existsSync(join(directory, file))) throw new Error(`Missing package file: ${file}.`)
   }
   if (directory === root) verifyHostBinary(executablePath(root))
@@ -78,8 +78,8 @@ export function buildPages(baseUrl, directory = root) {
   const temporary = mkdtempSync(join(tmpdir(), 'site-generator-pages-'))
   try {
     const site = join(temporary, 'site')
-    const example = join(directory, 'example')
-    cpSync(example, site, { recursive: true, filter: source => source !== join(example, 'dist') })
+    const documentation = join(directory, 'docs-site')
+    cpSync(documentation, site, { recursive: true, filter: source => source !== join(documentation, 'dist') })
     const config = parse(readFileSync(join(site, 'site.toml'), 'utf8'))
     config.url = url.href
     writeFileSync(join(site, 'site.toml'), stringify(config))
@@ -103,13 +103,14 @@ function archives() {
   for (const selected of platforms) {
     const temporary = mkdtempSync(join(tmpdir(), 'site-generator-archive-'))
     try {
-      const files = [selected.executable, 'README.md', 'SDS-Lite-LICENSE.txt', 'Lucide-LICENSE.txt', 'highlight-LICENSE.txt']
+      const files = [selected.executable, 'README.md', 'SDS-Lite-LICENSE.txt', 'Lucide-LICENSE.txt', 'highlight-LICENSE.txt', 'LICENSE']
       copyFileSync(executablePath(root, selected), join(temporary, selected.executable))
       chmodSync(join(temporary, selected.executable), 0o755)
       copyFileSync(join(root, 'README.md'), join(temporary, files[1]))
       copyFileSync(join(root, 'vendor/sds-lite/LICENSE'), join(temporary, files[2]))
       copyFileSync(join(root, 'vendor/lucide-LICENSE'), join(temporary, files[3]))
       copyFileSync(join(root, 'assets/highlight-LICENSE.txt'), join(temporary, files[4]))
+      copyFileSync(join(root, 'LICENSE'), join(temporary, files[5]))
       const extension = selected.platform === 'win32' ? 'zip' : 'tar.gz'
       const archive = join(output, `sds-site-generator-${selected.platform}-${selected.arch}-v${manifest.version}.${extension}`)
       if (existsSync(archive)) rmSync(archive)

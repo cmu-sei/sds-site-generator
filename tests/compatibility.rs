@@ -61,7 +61,7 @@ fn compatible_fixture() -> tempfile::TempDir {
 fn callouts_render_shared_recipes_and_preserve_nested_code_and_fenced_literals() {
     let temp = compatible_fixture();
     let root = temp.path();
-    fs::write(root.join("content/callouts.md"), "# Callouts\n\nSupported imported components.\n\n::callout{type='outline' variant='orange' size='sm'}\n**Warning:** [Home](index.md).\n\n::code-block{quality='good'}\n```text\n::callout{variant=\"red\"}\nLiteral example.\n::\n```\n::\n\n::callout{variant='green' type='bold'}\nNested note.\n::\n\nAfter nested components.\n::\n\nAfter the callout.\n").unwrap();
+    fs::write(root.join("content/callouts.md"), "# Callouts\n\nSupported shared components.\n\n::callout{variant='outline' tone='warning' size='sm'}\n**Warning:** [Home](index.md).\n\n::code-block{quality='good'}\n```text\n::callout{tone=\"danger\"}\nLiteral example.\n::\n```\n::\n\n::callout{tone='success' variant='bold'}\nNested note.\n::\n\nAfter nested components.\n::\n\nAfter the callout.\n").unwrap();
     let report = site_generator::build(root).unwrap();
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     let html = fs::read_to_string(root.join("dist/callouts/index.html")).unwrap();
@@ -81,35 +81,40 @@ fn callouts_render_shared_recipes_and_preserve_nested_code_and_fenced_literals()
             .select_first("aside.sds-callout[data-sds-tone='success']")
             .is_ok()
     );
-    assert!(html.contains("::callout{variant="));
+    assert!(html.contains("::callout{tone="));
     assert_eq!(document.select("aside.sds-callout").unwrap().count(), 2);
     assert!(!warning.text_contents().contains("After the callout."));
 }
 
 #[test]
-fn callouts_support_all_reference_colors_types_and_sizes() {
+fn callouts_support_all_semantic_tones_variants_and_sizes() {
     let temp = compatible_fixture();
     let mut source = String::from("# Callout recipes\n\nSupported shared recipes.\n\n");
-    let colors = [
-        ("blue", "info"),
-        ("indigo", "info"),
-        ("green", "success"),
-        ("teal", "success"),
-        ("orange", "warning"),
-        ("red", "danger"),
-        ("gray", "neutral"),
-        ("purple", "accent"),
-    ];
-    for (color, _) in colors {
-        for variant in ["subtle", "outline", "bold"] {
+    let tones = ["neutral", "accent", "info", "success", "warning", "danger"];
+    for tone in tones {
+        for variant in ["", "outline", "bold"] {
             for size in ["xs", "sm", "md", "lg"] {
-                source.push_str(&format!("::callout{{variant=\"{color}\" type='{variant}' size='{size}'}}\n**{color}** note.\n::\n\n"));
+                let property = if variant.is_empty() {
+                    String::new()
+                } else {
+                    format!(" variant='{variant}'")
+                };
+                source.push_str(&format!(
+                    "::callout{{tone=\"{tone}\"{property} size='{size}'}}\n**{tone}** note.\n::\n\n"
+                ));
             }
         }
     }
     fs::write(temp.path().join("content/recipes.md"), source).unwrap();
-    let report = site_generator::build(temp.path()).unwrap();
-    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    for compatibility in [false, true] {
+        fs::write(
+            temp.path().join("site.toml"),
+            format!("name = 'Callouts'\nurl = 'https://example.org/docs/'\ncompatibility = {compatibility}\n"),
+        )
+        .unwrap();
+        let report = site_generator::build(temp.path()).unwrap();
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    }
     let document = kuchiki::parse_html()
         .one(fs::read_to_string(temp.path().join("dist/recipes/index.html")).unwrap());
     assert_eq!(
@@ -117,19 +122,37 @@ fn callouts_support_all_reference_colors_types_and_sizes() {
             .select("aside.sds-callout[role='note']")
             .unwrap()
             .count(),
-        96
+        72
     );
-    for (color, tone) in colors {
+    for tone in tones {
         assert_eq!(
             document
-                .select(&format!(
-                    "aside[data-sds-callout-color='{color}'][data-sds-tone='{tone}']"
-                ))
+                .select(&format!("aside[data-sds-tone='{tone}']"))
                 .unwrap()
                 .count(),
             12
         );
     }
+    assert!(document.select_first("[data-sds-callout-color]").is_err());
+}
+
+#[test]
+fn callouts_default_to_the_native_neutral_subtle_medium_recipe() {
+    let temp = compatible_fixture();
+    fs::write(
+        temp.path().join("content/default.md"),
+        "# Defaults\n\nNative defaults.\n\n::callout\nA neutral note.\n::\n",
+    )
+    .unwrap();
+    site_generator::build(temp.path()).unwrap();
+    let document = kuchiki::parse_html()
+        .one(fs::read_to_string(temp.path().join("dist/default/index.html")).unwrap());
+    let callout = document.select_first("aside.sds-callout").unwrap();
+    let attributes = callout.attributes.borrow();
+    assert_eq!(attributes.get("data-sds-tone"), Some("neutral"));
+    assert_eq!(attributes.get("data-sds-size"), Some("md"));
+    assert!(!attributes.contains("data-sds-variant"));
+    assert!(!attributes.contains("data-sds-callout-color"));
 }
 
 #[test]
@@ -138,7 +161,12 @@ fn callouts_reject_unknown_properties_and_invalid_recipes() {
         "onclick='alert(1)'",
         "style='color:red'",
         "variant='unknown'",
+        "tone='unknown'",
+        "tone='blue'",
+        "variant='subtle'",
         "type='unknown'",
+        "tone='warning' type='outline'",
+        "tone='warning' variant='orange'",
         "size='unknown'",
     ] {
         let temp = compatible_fixture();
@@ -152,6 +180,124 @@ fn callouts_reject_unknown_properties_and_invalid_recipes() {
             .expect("invalid callout must fail");
         assert!(format!("{error:#}").contains("callout"), "{error:#}");
     }
+}
+
+#[test]
+fn legacy_callouts_require_compatibility_and_report_migration_warnings() {
+    for compatibility in [false, true] {
+        let temp = compatible_fixture();
+        fs::write(
+            temp.path().join("site.toml"),
+            format!("name = 'Callouts'\nurl = 'https://example.org/docs/'\ncompatibility = {compatibility}\n"),
+        )
+        .unwrap();
+        let colors = [
+            ("blue", "info"),
+            ("indigo", "info"),
+            ("green", "success"),
+            ("teal", "success"),
+            ("orange", "warning"),
+            ("red", "danger"),
+            ("gray", "neutral"),
+            ("purple", "accent"),
+        ];
+        let mut source = String::from("# Legacy callouts\n\nImported content.\n\n");
+        for (color, _) in colors {
+            for variant in ["subtle", "outline", "bold"] {
+                source.push_str(&format!("::callout{{variant='{color}' type='{variant}' size='sm'}}\nA legacy note.\n::\n\n"));
+            }
+        }
+        source.push_str("::callout{type='outline'}\nDefault legacy color.\n::\n\n::callout{variant='orange'}\nDefault legacy appearance.\n::\n");
+        fs::write(temp.path().join("content/legacy.md"), source).unwrap();
+        let result = site_generator::build(temp.path());
+        if !compatibility {
+            let error = result
+                .err()
+                .expect("normal mode must reject legacy callouts");
+            let message = format!("{error:#}");
+            assert!(message.contains("compatibility"), "{message}");
+            continue;
+        }
+        let report = result.unwrap();
+        assert_eq!(report.warnings.len(), 26);
+        assert!(
+            report
+                .warnings
+                .iter()
+                .all(|warning| warning.message.contains("Legacy callout"))
+        );
+        let document = kuchiki::parse_html()
+            .one(fs::read_to_string(temp.path().join("dist/legacy/index.html")).unwrap());
+        let callouts = document
+            .select("aside.sds-callout")
+            .unwrap()
+            .collect::<Vec<_>>();
+        for ((color, tone), recipes) in colors.into_iter().zip(callouts.chunks(3)) {
+            for (variant, callout) in [None, Some("outline"), Some("bold")]
+                .into_iter()
+                .zip(recipes)
+            {
+                let attributes = callout.attributes.borrow();
+                assert_eq!(attributes.get("data-sds-tone"), Some(tone), "{color}");
+                assert_eq!(attributes.get("data-sds-variant"), variant, "{color}");
+                assert_eq!(attributes.get("data-sds-size"), Some("sm"));
+                assert_eq!(
+                    attributes.get("data-sds-callout-color"),
+                    matches!(color, "indigo" | "teal").then_some(color)
+                );
+            }
+        }
+        let default_color = callouts[24].attributes.borrow();
+        assert_eq!(default_color.get("data-sds-tone"), Some("info"));
+        assert_eq!(default_color.get("data-sds-variant"), Some("outline"));
+        let default_appearance = callouts[25].attributes.borrow();
+        assert_eq!(default_appearance.get("data-sds-tone"), Some("warning"));
+        assert!(!default_appearance.contains("data-sds-variant"));
+        let status = std::process::Command::new(env!("CARGO_BIN_EXE_sds-site-generator"))
+            .args(["check", "--strict"])
+            .arg(temp.path())
+            .output()
+            .unwrap();
+        assert!(!status.status.success());
+        assert!(String::from_utf8_lossy(&status.stderr).contains("Strict validation failed"));
+    }
+}
+
+#[test]
+fn documentation_examples_use_shared_code_blocks() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs-site");
+    fs::copy(source.join("site.toml"), temp.path().join("site.toml")).unwrap();
+    for directory in ["content", "public"] {
+        copy_tree(&source.join(directory), &temp.path().join(directory));
+    }
+    let report = site_generator::build(temp.path()).unwrap();
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    fn check_pages(directory: &Path) {
+        for entry in fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                check_pages(&path);
+            } else if path
+                .extension()
+                .is_some_and(|extension| extension == "html")
+            {
+                let document = kuchiki::parse_html().one(fs::read_to_string(&path).unwrap());
+                for code in document.select(".sds-prose pre").unwrap() {
+                    assert!(
+                        code.as_node().ancestors().any(|node| {
+                            node.as_element().is_some_and(|element| {
+                                element.name.local.as_ref() == "site-code-block"
+                            })
+                        }),
+                        "{}: code example is missing its code-block wrapper",
+                        path.display()
+                    );
+                }
+            }
+        }
+    }
+    check_pages(&temp.path().join("dist"));
 }
 
 #[test]

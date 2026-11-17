@@ -14,12 +14,16 @@ import xml from "shiki/langs/xml.mjs";
 import json from "shiki/langs/json.mjs";
 import yaml from "shiki/langs/yaml.mjs";
 import diff from "shiki/langs/diff.mjs";
+import markdown from "shiki/langs/markdown.mjs";
+import toml from "shiki/langs/toml.mjs";
+import powershell from "shiki/langs/powershell.mjs";
+import ini from "shiki/langs/ini.mjs";
 import light from "shiki/themes/github-light-high-contrast.mjs";
 import dark from "shiki/themes/github-dark-high-contrast.mjs";
 
 const highlighter = await createHighlighterCore({
   themes: [light, dark],
-  langs: [c, cpp, java, perl, fortran, javascript, typescript, python, shell, html, xml, json, yaml, diff],
+  langs: [c, cpp, java, perl, fortran, javascript, typescript, python, shell, html, xml, json, yaml, diff, markdown, toml, powershell, ini],
   engine: createJavaScriptRegexEngine({ forgiving: true }),
 });
 

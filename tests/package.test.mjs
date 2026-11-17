@@ -67,17 +67,34 @@ test('native launcher preserves spaced paths and the CLI failure status', { skip
   }
 })
 
-test('Pages uses the deployment prefix without changing the example configuration', { skip: !existsSync(executablePath(root)) }, () => {
+test('Pages publishes the documentation at root and project URLs without changing its configuration', { skip: !existsSync(executablePath(root)) }, () => {
   const temporary = mkdtempSync(join(tmpdir(), 'site-generator-pages-test-'))
   try {
-    for (const file of ['example', 'scripts/cli.mjs', 'scripts/platforms.mjs', 'native']) cpSync(join(root, file), join(temporary, file), { recursive: true })
-    const config = readFileSync(join(temporary, 'example/site.toml'), 'utf8')
+    for (const file of ['docs-site', 'scripts/cli.mjs', 'scripts/platforms.mjs', 'native']) cpSync(join(root, file), join(temporary, file), { recursive: true })
+    const config = readFileSync(join(temporary, 'docs-site/site.toml'), 'utf8')
     for (const url of ['https://example.org/project/', 'https://example.org/']) {
       buildPages(url, temporary)
       const html = readFileSync(join(temporary, 'pages-dist/index.html'), 'utf8')
       assert.ok(html.includes(`href="${url}_site/`) || html.includes(`href="${new URL(url).pathname}_site/`))
+      assert.ok(html.includes('Publish documentation from Markdown'))
+      assert.ok(html.includes(`href="${new URL(url).pathname}guides/start/getting-started/"`))
+      const assets = readFileSync(join(temporary, 'pages-dist/guides/authoring/assets/index.html'), 'utf8')
+      assert.ok(assets.includes(`src="${new URL(url).pathname}images/authoring-flow.svg"`))
+      assert.ok(existsSync(join(temporary, 'pages-dist/downloads/author-checklist.txt')))
+      const nested = readFileSync(join(temporary, 'pages-dist/guides/publishing/team-workflows/index.html'), 'utf8')
+      const sidebar = nested.match(/<nav aria-label="Documentation">([\s\S]*?)<\/nav>/)?.[1]
+      assert.ok(sidebar, 'nested guide has a documentation sidebar')
+      const groups = [...sidebar.matchAll(/<details( open)?><summary><span class="sds-sr-only">Toggle (.*?) navigation<\/span><\/summary>/g)]
+      assert.deepEqual(groups.map(group => [group[2], Boolean(group[1])]), [
+        ['Start here', false],
+        ['Write content', false],
+        ['Publish and operate', true],
+        ['Maintain and migrate', false],
+      ])
+      assert.ok(sidebar.includes(`href="${new URL(url).pathname}guides/publishing/team-workflows/" aria-current="page"`))
+      assert.deepEqual(JSON.parse(readFileSync(join(temporary, 'pages-dist/_site/diagnostics.json'), 'utf8')), [])
       assert.ok(existsSync(join(temporary, 'pages-dist/.nojekyll')))
-      assert.equal(readFileSync(join(temporary, 'example/site.toml'), 'utf8'), config)
+      assert.equal(readFileSync(join(temporary, 'docs-site/site.toml'), 'utf8'), config)
     }
     assert.throws(() => buildPages('http://example.org/', temporary), /HTTPS/)
   } finally {
@@ -97,7 +114,7 @@ test('npm tarball supports offline installation and repo-local documentation scr
     const packed = entries[0]
     const files = new Set(packed.files.map(file => file.path))
     assert.ok(files.has(`native/${process.platform}-${process.arch}/${selectPlatform().executable}`))
-    for (const file of ['scripts/cli.mjs', 'scripts/platforms.mjs', 'vendor/sds-lite/LICENSE', 'vendor/lucide-LICENSE', 'assets/highlight-LICENSE.txt']) assert.ok(files.has(file))
+    for (const file of ['LICENSE', 'scripts/cli.mjs', 'scripts/platforms.mjs', 'vendor/sds-lite/LICENSE', 'vendor/lucide-LICENSE', 'assets/highlight-LICENSE.txt']) assert.ok(files.has(file))
     assert.ok(!files.has('Cargo.toml'))
     const installation = join(temporary, 'installation')
     run(process.execPath, [join(root, 'scripts/cli.mjs'), 'new', installation, '--url', 'https://example.org/my-docs/'], { stdio: 'pipe' })
@@ -114,6 +131,7 @@ test('npm tarball supports offline installation and repo-local documentation scr
     const version = run(process.execPath, [process.env.npm_execpath, 'exec', '--offline', '--', 'sds-site-generator', '--version'], { cwd: installation, encoding: 'utf8', stdio: 'pipe' }).trim()
     assert.equal(version, `sds-site-generator ${manifest.version}`)
     const consumer = JSON.parse(readFileSync(join(installation, 'package.json'), 'utf8'))
+    assert.equal(readFileSync(join(installation, 'node_modules', manifest.name, 'LICENSE'), 'utf8'), readFileSync(join(root, 'LICENSE'), 'utf8'))
     assert.ok(Object.hasOwn(consumer.devDependencies, manifest.name))
     for (const command of ['check', 'build']) run(process.execPath, [process.env.npm_execpath, 'run', command], { cwd: installation, stdio: 'pipe' })
     const previewHelp = run(process.execPath, [process.env.npm_execpath, 'run', 'dev', '--', '--help'], { cwd: installation, encoding: 'utf8', stdio: 'pipe' })

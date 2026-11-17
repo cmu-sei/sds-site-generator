@@ -192,9 +192,9 @@ fn starter_builds_complete_portable_site() {
 }
 
 #[test]
-fn documentation_toc_is_hierarchical_and_section_landing_links_are_not_duplicated() {
+fn documentation_toc_lists_only_sections_and_section_landing_links_are_not_duplicated() {
     let (_temp, root) = fixture();
-    fs::write(root.join("content/guides/nested.md"), "# Nested\n\nNested sections.\n\n## First\n\nText.\n\n### Child\n\nText.\n\n## Second\n\nText.").unwrap();
+    fs::write(root.join("content/guides/nested.md"), "# Nested\n\nNested sections.\n\n## First\n\nText.\n\n### Child\n\nText.\n\n#### Detail\n\nText.\n\n##### More detail\n\nText.\n\n###### Finest detail\n\nText.\n\n## Second\n\nText.").unwrap();
     fs::create_dir(root.join("content/guides/nested")).unwrap();
     fs::write(
         root.join("content/guides/nested/child.md"),
@@ -210,13 +210,23 @@ fn documentation_toc_is_hierarchical_and_section_landing_links_are_not_duplicate
     let document = kuchiki::parse_html()
         .one(fs::read_to_string(root.join("dist/guides/nested/index.html")).unwrap());
     let toc = document.select_first("main .sds-app-toc").unwrap();
-    assert_eq!(toc.as_node().select("ul > li").unwrap().count(), 3);
-    assert_eq!(toc.as_node().select("ul ul > li").unwrap().count(), 1);
-    assert!(
+    assert_eq!(
         toc.as_node()
-            .select_first("ul > li > ul > li > a[href='#child']")
-            .is_ok()
+            .select("a")
+            .unwrap()
+            .map(|link| link.attributes.borrow().get("href").unwrap().to_owned())
+            .collect::<Vec<_>>(),
+        ["#first", "#second"]
     );
+    assert_eq!(toc.as_node().select("ul ul").unwrap().count(), 0);
+    for selector in [
+        "h3#child",
+        "h4#detail",
+        "h5#more-detail",
+        "h6#finest-detail",
+    ] {
+        assert!(document.select_first(selector).is_ok(), "{selector}");
+    }
     assert!(
         document
             .select_first(".sds-app-pagination a[rel='prev']")

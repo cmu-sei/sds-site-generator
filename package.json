@@ -6,7 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/cmu-sei/sds-site-generator.git"
   },
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "bin": {
     "sds-site-generator": "scripts/cli.mjs"
@@ -16,6 +16,7 @@
     "scripts/platforms.mjs",
     "native/",
     "README.md",
+    "LICENSE",
     "vendor/sds-lite/LICENSE",
     "vendor/lucide-LICENSE",
     "assets/highlight-LICENSE.txt"
@@ -25,6 +26,9 @@
     "build:site": "node scripts/cli.mjs build example",
     "preview": "node scripts/cli.mjs preview example",
     "check": "node scripts/cli.mjs check example",
+    "build:docs": "node scripts/cli.mjs build docs-site",
+    "preview:docs": "node scripts/cli.mjs preview docs-site",
+    "check:docs": "node scripts/cli.mjs check docs-site --strict",
     "test": "node --test tests/package.test.mjs",
     "test:rust": "cargo test --all-targets --locked",
     "check:package": "node scripts/package.mjs verify",

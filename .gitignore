@@ -1,6 +1,8 @@
 /target/
 /example/dist/
 /example/.tmp*/
+/docs-site/dist/
+/docs-site/.tmp*/
 /cert-example/
 /bin/
 /native/

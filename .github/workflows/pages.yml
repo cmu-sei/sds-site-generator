@@ -1,4 +1,4 @@
-name: Deploy example to Pages
+name: Deploy documentation to Pages
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build static example
+    name: Build documentation site
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -48,7 +48,7 @@ jobs:
           path: pages-dist/
 
   deploy:
-    name: Deploy static example
+    name: Deploy documentation site
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10

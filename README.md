@@ -8,6 +8,20 @@ or internet connection is required to generate, preview, or search a website.
 The output is ordinary HTML, CSS, JavaScript, and JSON. SDS Lite is bundled
 locally at a pinned version.
 
+## User guide
+
+The [documentation example site](docs-site/README.md) is the GitHub Pages home
+and a complete authoring reference:
+
+- [Start here: installation and configuration](docs-site/content/guides/start/index.md)
+- [Write content: pages, Markdown, components, and assets](docs-site/content/guides/authoring/index.md)
+- [Publish and operate: deployment, CI, search, and hosting](docs-site/content/guides/publishing/index.md)
+- [Maintain and migrate: importing, troubleshooting, and stable URLs](docs-site/content/guides/maintenance/index.md)
+
+Preview it from this repository with `cargo run -- preview docs-site`, or use
+`npm run preview:docs` after `npm run build`. The existing `example/` remains
+the legacy compatibility demonstration; `new` still creates the small starter.
+
 The generated interface uses SDS Lite's documentation shell, sidebar, table of
 contents, prose, forms, lists, table containers, buttons, dropdowns, disclosures,
 and dialogs. It does not add a breadcrumb, matching the original CERT site.
@@ -18,9 +32,10 @@ The generator owns content, routes, navigation data, search indexing/ranking,
 keyboard result selection, and syntax highlighting. Safe inline styles already
 present in imported content may be retained; they are not required by the shell.
 
-The bundled `example/content/` and `example/public/` are exact copies of the
+The bundled `example/content/` and `example/public/` were imported from the
 legacy playground in `/Users/jdshimkoski/work/sds/sds-site-generator/.playground`.
-The 59-page import uses compatibility mode. Callouts, code blocks, plain code
+The 59-page import uses compatibility mode; callouts have been migrated to the
+semantic SDS Lite API. Callouts, code blocks, plain code
 fences, and Markdown tables use the shared SDS components. Ignored Nuxt navigation
 metadata and authored link/content issues still produce warnings. It is not an accessibility-certified
 or warning-free starter. The `new` command still creates the clean starter;
@@ -265,22 +280,36 @@ and `#complete` introduce short and complete code slots; an icon toggles between
 them, and copying uses the selected code. Property order and single or double
 quotes are supported. Icon and highlighting licenses are bundled in
 `dist/_site/code-controls-LICENSE.txt`.
+Fence labels select the bundled language grammar. Markdown (`markdown`, `md`),
+TOML (`toml`), PowerShell (`powershell`, `ps`, `ps1`, `pwsh`), and INI
+(`ini`, `properties`) are supported alongside the programming, shell, and data
+languages listed in the [code-block reference](docs-site/content/guides/authoring/components.md#syntax-highlighting).
+Highlighting requires JavaScript, uses local assets with light/dark themes,
+and does not auto-detect languages. Unlabeled fences, `text`, and unsupported
+labels remain readable plain text.
+
 Callouts use the shared SDS recipes and preserve nested Markdown and code blocks:
 
 ```markdown
-::callout{variant='orange' type='outline' size='sm'}
+::callout{tone='warning' variant='outline' size='sm'}
 **Warning:** Validate input before processing it.
 ::
 ```
 
-Supported colors are `blue`, `indigo`, `green`, `teal`, `orange`, `red`, `gray`,
-and `purple`. Types are `subtle` (default), `outline`, and `bold`; sizes are
-`xs`, `sm`, `md` (default), and `lg`. The default color is `blue`.
+Supported semantic tones are `neutral` (default), `accent`, `info`, `success`,
+`warning`, and `danger`. Variants are `outline` and `bold`; omit `variant` for
+the default subtle surface. Sizes are `xs`, `sm`, `md` (default), and `lg`.
+These map directly to SDS Lite's tone, variant, and size attributes.
+The former `type` property and color-name variants are accepted only with
+`compatibility = true`, with migration warnings. Normal mode rejects them;
+`check --strict` also rejects the compatibility warnings.
 Properties are allowlisted; executable Vue attributes are not supported.
 Component syntax inside fenced code stays literal.
 
-Plain fences provide the keyboard-focusable code presentation used by
-`ProsePre`. Markdown tables retain semantic, readable no-JavaScript markup;
+The rendered documentation and starter use the shared code-block wrapper for
+all block examples. Plain fences remain supported as keyboard-focusable,
+scrollable code without copy/fullscreen controls.
+Markdown tables retain semantic, readable no-JavaScript markup;
 the shared SDS runtime adds keyboard-accessible header sorting for simple
 tables, with ascending/descending states and numeric comparison. Tables with
 merged cells or existing interactive headers remain static.
@@ -294,6 +323,9 @@ site, replacing the starter content, and set `compatibility = true` in
 `site.toml`. Existing YAML metadata, semantic HTML, anchors, attachments,
 and code-example wrappers do not require rewriting. Compatibility mode preserves
 underscores in page URLs so imported Nuxt routes remain available.
+Compatibility mode accepts legacy callouts with warnings. To migrate them,
+replace color-name `variant` with semantic `tone`, rename `type` to `variant`,
+and omit the former `type="subtle"`.
 
 Compatibility mode reports source problems such as missing targets, missing
 image descriptions, heading gaps, and removed unsafe markup as warnings.
@@ -484,9 +516,10 @@ are skipped before a binary is staged. `npm run check:package` and ordinary
 `npm pack` deliberately require all six release binaries; a local host-only
 build is not a publishable distribution. CI assembles the complete bundle.
 Generated binaries, tarballs, and Pages output are ignored by Git.
-The root `npm run check` and Pages example build honor the imported example's
-explicit compatibility mode. Ordinary Pages inputs are still checked strictly;
-run `sds-site-generator check example --strict` to reject import warnings.
+The root `npm run check` honors the imported example's explicit compatibility
+mode; run `sds-site-generator check example --strict` to reject import warnings.
+Use `npm run check:docs`, `npm run build:docs`, and `npm run preview:docs` for
+the clean documentation example. The Pages build validates that site strictly.
 
 Install current stable Rust to build from source:
 
@@ -512,7 +545,7 @@ They use this project's bundled SDS assets, not the local SDS Native workspace.
 |---|---|---|
 | `.github/workflows/check.yml` | PRs, pushes to `main`/`hotfix/v*`, manual runs, reusable calls | Rust format/lint/tests, six native builds, real npm installation tests, full package and standalone archives, existing browser/Lighthouse checks |
 | `.github/workflows/release.yml` | `v*` tags or manual runs | Reuses Check; matching version tags publish the tested npm tarball and GitHub Release archives |
-| `.github/workflows/pages.yml` | Pushes to `main` or manual runs on the default branch | Generates and deploys `example/` at the configured GitHub Pages URL |
+| `.github/workflows/pages.yml` | Pushes to `main` or manual runs on the default branch | Generates and deploys `docs-site/` at the configured GitHub Pages URL |
 
 Each OS/architecture builds and tests on its native hosted runner. Linux uses
 statically linked musl binaries rather than requiring the build runner's glibc
@@ -530,17 +563,16 @@ Before enabling publication:
   `@cmu-sei/sds-site-generator` and `cmu-sei/sds-site-generator`; change the npm scope
   and repository URL if the owner or repository differs. Refresh the lockfile
   with `npm install --package-lock-only --ignore-scripts` after metadata edits.
-2. Decide the project's distribution license. No project license was supplied,
-  so the npm manifest explicitly uses `UNLICENSED`; bundled third-party
-  licenses are included independently. Do not assume this grants open-source
-  redistribution rights.
+2. Review the [project license](LICENSE), which matches the SEI Design System
+  license used by SDS Native. Preserve it in npm and standalone distributions,
+  along with the independently included third-party notices.
 3. Create the `github-packages` environment with the desired protection rules.
   Allow the release workflow's `GITHUB_TOKEN` to write packages and releases.
   For an existing package, grant this repository Actions access to it.
 4. In repository Settings > Pages, select **GitHub Actions** as the source.
   Configure the `github-pages` environment and optional custom domain.
   The workflow uses Pages' actual base URL, including project prefixes,
-  without changing `example/site.toml`; `cert-example/` is not deployed.
+  without changing `docs-site/site.toml`; neither legacy example is deployed.
 5. Require the Check workflow's **Build and test** result for pull requests.
   Runner builds, browser checks, and complete-package validation must pass
   before a release can publish.
@@ -616,6 +648,14 @@ See [vendor/sds-lite/PROVENANCE.md](vendor/sds-lite/PROVENANCE.md) for the exact
 upstream commit and asset checksums. Updates are explicit: replace the complete
 asset set, preserve the license, update provenance, and rerun Rust/browser
 checks. The generator never downloads assets during normal use.
+
+## License
+
+This project uses the [SEI Design System license](LICENSE), matching SDS Native
+and the SEI Design System. The npm package and standalone release archives
+include it. Bundled third-party software retains its own terms.
+See [licensing and publication rights](docs-site/content/guides/publishing/licensing.md)
+for the distinction between software terms and rights to authored content.
 
 ## Current scope
 

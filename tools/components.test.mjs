@@ -68,9 +68,9 @@ ${"Supporting reference information for parameter validation and secure coding.\
 
 Review the examples before publishing.
 `);
-  const colors = ["blue", "indigo", "green", "teal", "orange", "red", "gray", "purple"];
-  const callouts = colors.flatMap(color => ["subtle", "outline", "bold"].map(type =>
-    `::callout{variant='${color}' type='${type}' size='sm'}\n**${color} ${type}:** Shared component content.\n::\n`
+  const tones = ["neutral", "accent", "info", "success", "warning", "danger"];
+  const callouts = tones.flatMap(tone => ["", "outline", "bold"].map(variant =>
+    `::callout{tone='${tone}'${variant ? ` variant='${variant}'` : ""} size='sm'}\n**${tone} ${variant || "subtle"}:** Shared component content.\n::\n`
   )).join("\n");
   await writeFile(join(root, "content/components.md"), `# Shared components
 
@@ -150,11 +150,11 @@ Plain fenced code.
       await table.getByRole("button", { name: "Sort by Name", exact: true }).click();
       assert.deepEqual(await table.locator("tbody td:first-child").allTextContents(), ["Alpha", "Beta", "Gamma"]);
       assert.equal(await table.locator("th").last().getAttribute("aria-sort"), "none");
-      assert.equal(await components.locator("aside.sds-callout[role='note']").count(), 24);
+      assert.equal(await components.locator("aside.sds-callout[role='note']").count(), 18);
       const recipes = await components.locator("aside.sds-callout").evaluateAll(elements => elements.map(element => {
         const style = getComputedStyle(element);
         const paragraph = getComputedStyle(element.querySelector("p"));
-        return { color: element.dataset.sdsCalloutColor, type: element.dataset.sdsVariant,
+        return { tone: element.dataset.sdsTone, variant: element.dataset.sdsVariant || "subtle",
           background: style.backgroundColor, text: style.color, paragraphText: paragraph.color,
           top: paragraph.marginTop, bottom: paragraph.marginBottom, padding: style.paddingTop };
       }));
@@ -163,11 +163,11 @@ Plain fenced code.
         assert.equal(recipe.top, "0px");
         assert.equal(recipe.bottom, "0px");
         assert.notEqual(recipe.padding, "0px");
-        if (recipe.type !== "outline") assert.notEqual(recipe.background, "rgba(0, 0, 0, 0)");
+        if (recipe.variant !== "outline") assert.notEqual(recipe.background, "rgba(0, 0, 0, 0)");
       }
-      const background = color => recipes.find(recipe => recipe.color === color && recipe.type === "subtle").background;
-      assert.notEqual(background("blue"), background("indigo"));
-      assert.notEqual(background("green"), background("teal"));
+      const background = tone => recipes.find(recipe => recipe.tone === tone && recipe.variant === "subtle").background;
+      assert.notEqual(background("info"), background("warning"));
+      assert.notEqual(background("neutral"), background("accent"));
       assert.equal(await components.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.equal(await components.locator("article pre[tabindex='0'][role='group']").count(), 1);
     }
@@ -460,7 +460,7 @@ Plain fenced code.
   assert.equal(await noScript.locator("site-code-block [data-sds-code-slot='default']").first().isVisible(), true);
   assert.match(await noScript.locator("site-code-block pre code").first().textContent(), /return 0/);
   await noScript.goto(`${url}components/`);
-  assert.equal(await noScript.locator("aside.sds-callout[role='note']").count(), 24);
+  assert.equal(await noScript.locator("aside.sds-callout[role='note']").count(), 18);
   assert.equal(await noScript.locator("article table button").count(), 0);
   assert.deepEqual(await noScript.locator("article table tbody td:first-child").allTextContents(), ["Beta", "Alpha", "Gamma"]);
   assert.equal(await noScript.locator("article pre[tabindex='0']").count(), 1);
@@ -498,7 +498,7 @@ Plain fenced code.
   assert.equal(await mobileOverview.evaluate(link => getComputedStyle(link, "::before").content), "none");
   await mobileOverview.click();
   await childPage.waitForURL(url);
-  console.log("SDS recipes passed: callout colors/types/light/dark/mobile/no-JS, semantic tables and keyboard/numeric sorting with bundled icons, plain fences, scrollspy, dropdown navigation, code controls, highlighting, copying, fullscreen, and visual parity.");
+  console.log("SDS recipes passed: callout tones/variants/light/dark/mobile/no-JS, semantic tables and keyboard/numeric sorting with bundled icons, plain fences, scrollspy, dropdown navigation, code controls, highlighting, copying, fullscreen, and visual parity.");
 } finally {
   await browser?.close();
   if (preview && preview.exitCode === null) {

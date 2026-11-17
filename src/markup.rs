@@ -238,7 +238,7 @@ pub(crate) fn sanitize(input: &str) -> (String, Vec<String>) {
     (clean, changes)
 }
 
-pub(crate) fn markdown(input: &str) -> Result<(NodeRef, Vec<String>)> {
+pub(crate) fn markdown(input: &str, compatibility: bool) -> Result<(NodeRef, Vec<String>)> {
     let mut prepared = String::new();
     let mut fence: Option<(char, usize)> = None;
     let mut blocks: Vec<(&str, &str)> = Vec::new();
@@ -287,37 +287,88 @@ pub(crate) fn markdown(input: &str) -> Result<(NodeRef, Vec<String>)> {
                 .map_err(|()| anyhow::anyhow!("Invalid callout properties."))?;
             let attributes = element.attributes.borrow();
             ensure!(
-                attributes
-                    .map
-                    .keys()
-                    .all(|name| matches!(name.local.as_ref(), "type" | "variant" | "size")),
-                "line {}: unsupported callout properties. Use type, variant, and size.",
+                attributes.map.keys().all(|name| matches!(
+                    name.local.as_ref(),
+                    "tone" | "variant" | "size" | "type"
+                )),
+                "line {}: unsupported callout properties. Use tone, variant, and size.",
                 index + 1
             );
-            let variant = attributes.get("type").unwrap_or("subtle");
-            ensure!(
-                matches!(variant, "subtle" | "outline" | "bold"),
-                "line {}: callout type must be subtle, outline, or bold.",
-                index + 1
-            );
+            let legacy = attributes.get("type").is_some()
+                || attributes.get("variant").is_some_and(|value| {
+                    matches!(
+                        value,
+                        "blue" | "indigo" | "green" | "teal" | "orange" | "red" | "gray" | "purple"
+                    )
+                });
+            let (tone, variant, color) = if legacy {
+                ensure!(
+                    compatibility,
+                    "line {}: Legacy callout syntax requires compatibility = true in site.toml. Use tone, variant, and size for new content.",
+                    index + 1
+                );
+                ensure!(
+                    attributes.get("tone").is_none(),
+                    "line {}: Do not mix semantic tone with legacy callout properties.",
+                    index + 1
+                );
+                let color = attributes.get("variant").unwrap_or("blue");
+                let tone = match color {
+                    "blue" | "indigo" => "info",
+                    "green" | "teal" => "success",
+                    "orange" => "warning",
+                    "red" => "danger",
+                    "gray" => "neutral",
+                    "purple" => "accent",
+                    _ => anyhow::bail!("line {}: invalid legacy callout color {color}.", index + 1),
+                };
+                let variant = attributes.get("type").unwrap_or("subtle");
+                ensure!(
+                    matches!(variant, "subtle" | "outline" | "bold"),
+                    "line {}: legacy callout type must be subtle, outline, or bold.",
+                    index + 1
+                );
+                changes.push(format!(
+                    "line {}: Legacy callout syntax; use tone=\"{tone}\" and variant=\"outline\" or \"bold\", or omit variant for a subtle surface.",
+                    index + 1
+                ));
+                (
+                    tone,
+                    (variant != "subtle").then_some(variant),
+                    matches!(color, "indigo" | "teal").then_some(color),
+                )
+            } else {
+                let tone = attributes.get("tone").unwrap_or("neutral");
+                ensure!(
+                    matches!(
+                        tone,
+                        "neutral" | "accent" | "info" | "success" | "warning" | "danger"
+                    ),
+                    "line {}: callout tone must be neutral, accent, info, success, warning, or danger.",
+                    index + 1
+                );
+                let variant = attributes.get("variant");
+                ensure!(
+                    variant.is_none_or(|value| matches!(value, "outline" | "bold")),
+                    "line {}: callout variant must be outline or bold; omit it for the default subtle surface.",
+                    index + 1
+                );
+                (tone, variant, None)
+            };
             let size = attributes.get("size").unwrap_or("md");
             ensure!(
                 matches!(size, "xs" | "sm" | "md" | "lg"),
                 "line {}: invalid callout size.",
                 index + 1
             );
-            let color = attributes.get("variant").unwrap_or("blue");
-            let tone = match color {
-                "blue" | "indigo" => "info",
-                "green" | "teal" => "success",
-                "orange" => "warning",
-                "red" => "danger",
-                "gray" => "neutral",
-                "purple" => "accent",
-                _ => anyhow::bail!("line {}: unsupported callout variant {color}.", index + 1),
-            };
+            let variant = variant
+                .map(|value| format!(" data-sds-variant=\"{value}\""))
+                .unwrap_or_default();
+            let color = color
+                .map(|value| format!(" data-sds-callout-color=\"{value}\""))
+                .unwrap_or_default();
             prepared.push_str(&format!("<!--site-callout-start:{}-->", callouts.len()));
-            callouts.push(format!("<aside class=\"sds-callout\" role=\"note\" data-sds-tone=\"{tone}\" data-sds-variant=\"{variant}\" data-sds-size=\"{size}\" data-sds-callout-color=\"{color}\">"));
+            callouts.push(format!("<aside class=\"sds-callout\" role=\"note\" data-sds-tone=\"{tone}\"{variant} data-sds-size=\"{size}\"{color}>"));
             blocks.push(("callout", "default"));
         } else if fence.is_none()
             && trimmed

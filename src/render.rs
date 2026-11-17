@@ -477,38 +477,20 @@ fn toc(page: &Page) -> String {
     let headings: Vec<_> = page
         .headings
         .iter()
-        .filter(|heading| heading.level > 1)
+        .filter(|heading| heading.level == 2)
         .collect();
-    let Some(first) = headings.first() else {
+    if headings.is_empty() {
         return String::new();
-    };
-    let base = first.level;
-    let mut depth = base;
+    }
     let mut result = format!(
         "<nav class=\"sds-app-toc\" aria-label=\"On this page\"><strong>{LIST_ORDERED}On this page</strong><ul>",
     );
-    for (index, heading) in headings.iter().enumerate() {
-        let level = heading.level.max(base).min(depth + 1);
-        if index > 0 {
-            if level > depth {
-                result.push_str("<ul>");
-            } else {
-                result.push_str("</li>");
-                for _ in level..depth {
-                    result.push_str("</ul></li>");
-                }
-            }
-        }
-        depth = level;
+    for heading in headings {
         result.push_str(&format!(
-            "<li><a href=\"#{}\">{}</a>",
+            "<li><a href=\"#{}\">{}</a></li>",
             escape(&heading.id),
             escape(&heading.text)
         ));
-    }
-    result.push_str("</li>");
-    for _ in base..depth {
-        result.push_str("</ul></li>");
     }
     result.push_str("</ul></nav>");
     result
