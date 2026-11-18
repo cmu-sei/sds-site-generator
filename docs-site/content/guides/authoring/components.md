@@ -5,9 +5,8 @@ navigation:
 ---
 # Special syntax
 
-Two component-style Markdown wrappers are supported: callouts and code blocks.
-They generate static content, with optional browser enhancements, not Vue.
-Put opening and closing delimiters on their own lines.
+Add notes and code examples with `::callout` and `::code-block`.
+Put opening and closing delimiters on separate lines.
 
 ## Callouts
 
@@ -29,16 +28,16 @@ Put opening and closing delimiters on their own lines.
 | `variant` (appearance) | `outline`, `bold`; omit for a subtle surface | Subtle surface |
 | `size` | `xs`, `sm`, `md`, `lg` | `md` |
 
-These options map directly to SDS Lite's `data-sds-tone`, `data-sds-variant`,
-and `data-sds-size`. A bare `::callout` uses the neutral, subtle, medium recipe.
-In normal mode, there is no `type` property, and color names such as `orange`
-are not tones or variants. Compatibility mode accepts the
-[old callout format with migration warnings](../maintenance/importing.md#legacy-callouts).
-Do not mix legacy properties with `tone`. Unknown properties and invalid
-values still fail in compatibility mode.
-Nested Markdown, lists, and fenced code
-are supported. Write a useful label such as **Warning:** rather than conveying
-meaning by color alone.
+Properties map to SDS Lite's `data-sds-tone`, `data-sds-variant`, and
+`data-sds-size`. A bare `::callout` uses the defaults above.
+
+Use nested Markdown, lists, and fenced code. Include a label such as
+**Warning:** so meaning does not depend on color.
+
+Legacy `type` and color variants such as `orange` require
+[compatibility mode](../maintenance/importing.md#legacy-callouts) and produce
+migration warnings. Never mix them with `tone`; unknown properties and invalid
+values fail in either mode.
 
 ## Code examples
 
@@ -65,17 +64,17 @@ return 0;
 | `quality="bad"` | Noncompliant code, red treatment and badge |
 | `quality="average"` | Neutral example; the default |
 
-Quality is an author-supplied label, not a code analyzer's verdict.
-Use the neutral default for ordinary commands, configuration, and syntax
-examples; reserve `good` and `bad` for actual compliance examples.
-Use language-tagged fences inside the wrapper. Copy and fullscreen controls
-are enhanced with JavaScript; Escape exits fullscreen and restores focus.
-Clipboard failures are shown visibly. Code remains readable without scripts.
+Quality labels are yours, not automated analysis. Use neutral for ordinary
+examples; reserve `good` and `bad` for compliance examples.
+
+JavaScript adds copy and fullscreen controls. Escape exits fullscreen and
+restores focus; clipboard failures are displayed. Code stays readable without
+JavaScript.
 
 ### Syntax highlighting
 
-Put a lowercase language label immediately after the opening backticks,
-inside the wrapper. The label belongs on the fence, not on `::code-block`:
+Put a lowercase language label after the fence's opening backticks,
+not on `::code-block`:
 
 ::code-block
 ````markdown
@@ -88,10 +87,8 @@ url = "https://example.org/docs/"
 ````
 ::
 
-Highlighting uses locally bundled Shiki grammars and high-contrast light/dark
-themes. It requires JavaScript, but no CDN, internet connection, or external
-highlighting service. Both wrapped examples and plain Markdown fences are
-highlighted when their language is supported.
+Highlighting uses bundled Shiki grammars and high-contrast light/dark themes.
+It needs JavaScript, not internet access, and works with wrapped or plain fences.
 
 | Language | Accepted fence labels |
 | --- | --- |
@@ -118,17 +115,14 @@ Dependency grammars also make CSS (`css`), GLSL (`glsl`), SQL (`sql`), regular
 expressions (`regexp`, `regex`), and C++ macros (`cpp-macro`) available.
 Fortran support is free-form, not a separate fixed-form grammar.
 
-Use `text` or omit the label for intentional plain text. Unknown labels also
-remain plain text; the generator does not auto-detect a language or download
-grammars. Without JavaScript, all examples remain readable but unhighlighted.
-These are the bundled languages, not every language supported by Shiki.
-Adding a grammar requires rebuilding the generator's bundled assets; it is
-not a `site.toml` option.
+Use `text` or omit the label for plain text. Unknown labels stay unhighlighted;
+languages are not auto-detected or downloaded. Without JavaScript, code stays
+readable and unhighlighted. Adding a grammar requires rebuilding the bundled
+highlighting assets.
 
 ### Short and complete code
 
-Use `#default` and `#complete` on separate lines inside a code block to offer a
-short example and its complete version:
+Offer short and complete versions with `#default` and `#complete`:
 
 ::code-block
 ````markdown
@@ -160,9 +154,8 @@ int main(void) {
 ```
 ::
 
-A toggle switches versions, and Copy uses the selected version. These slot
-markers are not headings; write them exactly as shown, without a space after
-`#`.
+A toggle switches versions; Copy uses the selection. Put each marker on its own
+line, without a space after `#`.
 
 ## Syntax rules
 

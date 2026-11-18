@@ -1,9 +1,8 @@
 # Your documentation website
 
-The content and public assets are copied unchanged from
-`/Users/jdshimkoski/work/sds/sds-site-generator/.playground`.
-This is a legacy Nuxt example, not the clean generated starter. Compatibility
-mode reports unrecognized MDC components, ignored `.navigation.yml` files,
+This example preserves imported Nuxt content and public assets to demonstrate
+legacy compatibility. To create a new site, run `sds-site-generator new my-docs`.
+Compatibility mode reports unrecognized MDC components, ignored `.navigation.yml` files,
 and source link/content problems in `dist/_site/diagnostics.json`.
 Callouts, code blocks, plain fences, and sortable Markdown tables use shared
 SDS components without rewriting the copied content.

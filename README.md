@@ -3,40 +3,39 @@
 A Markdown-first documentation site generator written in Rust, with the
 [SDS Lite documentation shell](https://github.com/cmu-sei/sds-lite).
 
-Authors need one executable: no Node.js, Rust, accounts, or search service.
-Sites build and run offline with bundled assets and browser-based search.
-Output is static HTML, CSS, JavaScript, and JSON.
+One executable builds static HTML, CSS, JavaScript, and JSON with bundled
+assets and browser-based search. Build and serve offline without Node.js,
+Rust, accounts, or an external search service.
 
 ## Quick start
 
-A local macOS executable is included in `bin/sds-site-generator`.
-Preview the documentation from this directory:
+[Install the executable](docs-site/content/guides/start/installation.md) for
+macOS, Linux, or Windows (x64 or ARM64), and add it to your PATH.
+
+Create and preview your site:
 
 ```sh
-./bin/sds-site-generator preview docs-site
+sds-site-generator new my-docs --name "My documentation" --url "https://example.org/docs/"
+cd my-docs
+sds-site-generator preview .
 ```
 
-Open the printed address. Save edits and refresh the browser; Ctrl+C stops
-preview. Use `--port 8080` to choose another port.
+Open the printed address. Edit `content/index.md`, save, and refresh the
+browser after a successful rebuild. Use `--port 8080` to choose another port.
 
-Create, validate, and build your own site:
+Stop preview with Ctrl+C, then validate and build:
 
 ```sh
-./bin/sds-site-generator new ~/work/my-docs \
-  --name "My documentation" \
-  --url https://example.org/docs/
-./bin/sds-site-generator preview ~/work/my-docs
-./bin/sds-site-generator check ~/work/my-docs --strict
-./bin/sds-site-generator build ~/work/my-docs
+sds-site-generator check . --strict
+sds-site-generator build .
 ```
 
 `new` requires a directory that does not already exist. Other commands default
 to the current directory. Set the site's publishing URL before deployment;
 preview uses the same URL subdirectory locally.
 
-Public binary and npm downloads are not available yet. Release workflows
-package macOS, Linux, and Windows executables for x64 and ARM64, plus an
-optional npm installer requiring Node.js 22.19+.
+The [optional npm installer](docs-site/content/guides/start/installation.md#optional-npm-installation)
+requires Node.js 22.19+ and GitHub Packages authentication.
 
 ## Writing and publishing
 
@@ -60,23 +59,21 @@ my-docs/
   in `public/` and reference them with site-root paths such as `/images/diagram.png`.
 - Configure the site name, publishing URL, and optional navigation in `site.toml`.
 - Publish the **contents** of `dist/` to a static host with HTTPS and directory
-  index support. Preview is a development server, not a production server.
+  index support. Use preview for local development.
 
 Validation failures preserve the last good build. Keep hand-authored files
 outside `dist/` and avoid simultaneous builds of the same site.
 
 Content and navigation work without JavaScript; search requires JavaScript
-and HTTP(S). Arbitrary scripts and Vue components are not executed.
-Accessibility depends on authored content and hosting; conformance and audit
-scores are not guaranteed.
+and HTTP(S).
+Follow the [accessible authoring guide](docs-site/content/guides/authoring/accessibility.md)
+to review your content and deployed site.
 
 ## Documentation
 
-The [documentation site](docs-site/README.md) is the complete authoring reference
-and GitHub Pages home:
+The [documentation site](docs-site/README.md) covers:
 
 - [Start here](docs-site/content/guides/start/index.md): installation and configuration.
-- [Install the generator](docs-site/content/guides/start/installation.md): end-user setup for macOS, Linux, and Windows.
 - [Write content](docs-site/content/guides/authoring/index.md): Markdown, metadata, components, and assets.
 - [Publish and operate](docs-site/content/guides/publishing/index.md): deployment, CI, search, and hosting.
 - [Maintain and migrate](docs-site/content/guides/maintenance/index.md): imports, troubleshooting, and stable URLs.

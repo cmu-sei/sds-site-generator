@@ -3,8 +3,7 @@ order: 2
 ---
 # Team workflows and CI
 
-Keep the source under version control, pin the generator version, and validate
-changes before publishing. The same source can be built locally or in CI.
+Version your source, pin the generator, and validate changes locally and in CI.
 
 ## What belongs in the repository
 
@@ -18,10 +17,10 @@ a token-free `.npmrc`:
 ```
 ::
 
-Ignore `dist/` and `node_modules/`. Keep credentials in each author's user
-configuration or the CI secret store, never in the repository or public assets.
-Use [the setup commands](../start/getting-started.md#optional-npm-installation) to
-install an exact published generator version and define npm scripts.
+Ignore `dist/` and `node_modules/`. Store credentials in user configuration or
+CI secrets, never in the repository or public assets.
+[Set up npm](../start/installation.md#optional-npm-installation) with an exact
+generator version and the scripts used below.
 
 ## Review a content change
 
@@ -31,14 +30,13 @@ install an exact published generator version and define npm scripts.
 4. Open a pull request describing URL changes, moved downloads, and new images.
 5. Publish only after review and a successful build.
 
-Review meaning, not just validation: accurate image descriptions, meaningful
-headings, useful examples, and understandable link labels require a person.
-For a compatibility import, use strict validation as a release gate while
-tracking the remaining editorial repairs separately.
+Review image descriptions, headings, examples, and link labels manually.
+For compatibility imports, require strict validation before release and track
+editorial repairs separately.
 
 ## A minimal npm-based CI check
 
-In a separate documentation repository using the npm scripts above, create
+In your documentation repository, create
 `.github/workflows/check.yml`:
 
 ::code-block
@@ -74,35 +72,31 @@ jobs:
 ```
 ::
 
-This requires a published package, a committed lockfile, and Actions read
-access to that package for the documentation repository. It validates and
-builds, but does not deploy. Adjust `main` if your publishing branch differs.
-GitHub Packages access may be restricted for forked pull requests; arrange a
-trusted review/build path rather than exposing a privileged token to untrusted
-code. Keep action revisions and the Node version maintained.
+Commit the lockfile and grant the repository Actions read access to the package.
+Adjust `main` for your branch; keep action revisions and Node maintained.
+Add a [deployment workflow](deployment.md#github-pages-your-own-site) to publish.
 
-Standalone-binary CI can run the equivalent `check . --strict` and `build .`
-commands without Node.js. Obtain the exact platform release through your
-organization's approved process.
+Forked pull requests may lack package access. Use a trusted review/build path;
+never expose privileged tokens to untrusted code.
+
+Standalone CI needs no Node.js: obtain a pinned platform executable through
+your approved process, then run `check . --strict` and `build .`.
 
 ## Drafts, hidden pages, and private documentation
 
-Use `draft: true` for work that must not appear in the next generated site.
-Draft pages are omitted, so links from published pages to drafts fail checks.
-Build before deploying, and replace the old deployment: omitting a page from
-new output does not delete a previously uploaded copy on every host.
+`draft: true` excludes a page from the next build; links to it fail validation.
+Replace the old deployment completely so previously published copies are removed.
 
-Use `navigation: false` only to remove a page from navigation. It remains
-accessible and searchable. Unlinked pages, asset URLs, and robots rules do not
-provide confidentiality.
+`navigation: false` hides only the menu entry; the page stays accessible and
+searchable. Unlinked pages, asset URLs, and robots rules are not access control.
 
 For private documentation, enforce authentication at the host for **all**
-generated pages, search data, downloads, and assets. The generator does not
-implement login, authorization, encryption, or per-page access policies.
+pages, search data, downloads, and assets. The host must provide login,
+authorization, encryption, and any per-page access policies.
 
 ## Upgrade deliberately
 
-Install the selected published version with `--save-dev --save-exact`, review
+Install the selected release version with `--save-dev --save-exact`, review
 the release notes, and commit both npm manifest and lockfile. Rebuild and check
 representative pages, nested navigation, search, and downloads before release.
 For standalone use, record the executable version in contributor instructions.

@@ -3,9 +3,7 @@ order: 5
 ---
 # Accessible authoring
 
-The site shell supplies accessible foundations, but authors determine whether
-the content is understandable. Validation cannot judge the quality of a
-description, a link label, or an explanation.
+Review descriptions, link labels, and explanations with every content change.
 
 ## Describe purpose, not just appearance
 
@@ -16,11 +14,11 @@ description, a link label, or an explanation.
 | Link label: "Click here" | "Download the installation checklist (PDF)" |
 | Heading: "More" | "Troubleshoot installation errors" |
 
-Use the image description that helps the reader complete the task. Do not
-repeat a nearby caption unnecessarily. A complex chart needs its conclusions
-and important data in nearby prose or a table, not a very long alt attribute.
-Only purely decorative images should use the
-[explicit decorative marker](assets.md#add-an-image).
+Describe images to help the reader complete the task; avoid repeating captions.
+Explain complex charts in nearby prose or a table rather than long alt text.
+Use the
+[explicit decorative marker](assets.md#add-an-image)
+only for purely decorative images.
 
 ::code-block
 ```markdown
@@ -33,13 +31,11 @@ These are illustrative asset paths; add the files before using them.
 
 ## Make the reading order clear
 
-- Use one main heading and consecutive section levels, not bold text posing
-  as headings.
+- Use one main heading and consecutive heading levels, not bold text as headings.
 - Write descriptive headings that make sense in a table of contents.
 - Use numbered lists for ordered tasks and bullets for unordered choices.
 - Introduce code examples with their purpose and explain important results.
-- Do not rely on position, color, or an icon alone: write "Warning" or
-  "Noncompliant example" as well as choosing a visual treatment.
+- Label warnings and noncompliant examples; do not rely on position, color, or icons.
 
 For example, replace "Choose the green option on the right" with
 "Choose **Publish**." Use ordinary text for essential instructions, not text
@@ -47,11 +43,9 @@ embedded only in a screenshot.
 
 ## Keep tables simple
 
-Use a header row and a short introduction explaining what the reader should
-compare. Prefer a list for a sequence of instructions or unrelated facts.
-Avoid merged cells and complicated header relationships when a simpler table
-will work. Markdown tables cannot express every accessible table structure;
-complex data may need carefully authored semantic HTML and manual review.
+Use a header row and explain what to compare. Prefer lists for instructions or
+unrelated facts. Avoid merged cells and complex headers; data beyond Markdown
+tables may need semantic HTML and manual accessibility review.
 
 ## Review with a keyboard and assistive technology
 
@@ -60,9 +54,8 @@ complex data may need carefully authored semantic HTML and manual review.
 3. Check that long code and tables remain readable on a narrow screen and
    with browser zoom increased.
 4. Review light and dark appearance; do not use color as the only distinction.
-5. If possible, use a screen reader's heading and link lists to check that
-   headings, labels, and image descriptions make sense without visual context.
+5. Use a screen reader's heading and link lists to check labels and descriptions
+   without visual context.
 
-Automated accessibility tools can help identify issues, but do not replace
-manual review or establish WCAG conformance. Test the deployed site as well as
-local preview, especially when your host adds authentication or other UI.
+Combine automated checks with manual review. Assess WCAG conformance on the
+complete deployed site, including content and host-added authentication or UI.

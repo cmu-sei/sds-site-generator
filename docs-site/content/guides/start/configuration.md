@@ -3,8 +3,8 @@ order: 3
 ---
 # Site configuration
 
-Place `site.toml` in the site root, beside `content/` and `public/`.
-Use TOML, not YAML. Unknown top-level settings are rejected.
+Configure your site in `site.toml`, beside `content/` and `public/`.
+Use TOML; unknown top-level settings fail validation.
 
 ## All site settings
 
@@ -29,9 +29,8 @@ repository = "https://github.com/example/my-docs"
 | `repository` | No | Absolute HTTP(S) URL for the masthead source link |
 | `navigation` | No; automatic | Ordered custom main-menu entries; see below |
 
-Set site-level values **before** any `[[navigation]]` declarations. In TOML,
-values after a table declaration belong to that table until another
-declaration changes the context.
+Set site-level values **before** `[[navigation]]`; values after a TOML table
+declaration belong to that table.
 
 ## Choose the publishing URL
 
@@ -42,35 +41,28 @@ url = "https://your-org.github.io/my-docs/"
 ```
 ::
 
-For a domain-root site, use a root URL such as `https://docs.example.org/`.
-The URL controls canonical links, sitemap entries, asset paths, and preview's
-local mount point. Use the final public URL, not the localhost preview address.
-A missing trailing slash is added automatically.
+Use your final public URL, not localhost. For a domain-root site, use
+`https://docs.example.org/`. The URL controls canonical links, sitemaps, asset
+paths, and preview's mount point. A trailing slash is added if missing.
 
 URLs cannot contain credentials, query strings, or fragments. Deployment
 subdirectory segments may contain only ASCII letters, numbers, hyphens, and
-underscores. Use HTTPS for production. The scaffold's `https://example.com/`
-is a placeholder, not a deployment destination.
+underscores. Use HTTPS for production.
 
 `repository` also rejects credentials. `language` must consist of nonempty
 alphanumeric segments separated by hyphens; choose a meaningful language tag.
 
 ## Language and translations
 
-`language` sets the document-wide HTML language, helping browsers and assistive
-technology interpret the content. It does not translate page content, search
-messages, or interface labels, and it does not create language-specific menus
-or alternate-language metadata.
+`language` sets the HTML language for browsers and assistive technology.
+Interface labels and search messages are in English.
 
-There is no per-page language configuration or automatic translation workflow.
-For separately maintained language editions, build separate sites with their
-own configuration and publishing URL, then link between them explicitly.
-Do not assume changing this setting localizes the English interface.
+Maintain each translation as a separate site with its own `language` and
+publishing URL. Link between editions.
 
 ## Metadata and discoverability
 
-The generator derives metadata from your content; it is not configured through
-arbitrary front-matter keys:
+Metadata comes from these settings and page content:
 
 | Output | Source |
 | --- | --- |
@@ -80,21 +72,17 @@ arbitrary front-matter keys:
 | Sitemap destinations | Published page routes under the configured site `url` |
 | HTML language | Site `language` |
 
-Use a specific title and a concise, accurate description for important pages.
-The site-level `description` describes the search page; it does not replace
-individual page descriptions.
+Give pages specific titles and concise descriptions. The site-level
+`description` applies only to the search page.
 
-Basic Open Graph, a Twitter summary-card declaration, and WebPage structured
-data are generated. There are no supported fields for custom social-preview
-images, arbitrary head tags, per-page canonical overrides, or per-page
-`noindex`. Extra YAML keys do not enable these features.
-Search engines and social platforms decide how to display or cache previews;
-the generator cannot guarantee an exact snippet or immediate indexing.
+The output includes Open Graph, a Twitter summary-card declaration, and
+WebPage structured data. Custom social images, arbitrary head tags, per-page
+canonical overrides, and `noindex` are unsupported. Search and social platforms
+control preview display and caching.
 
 ## Main navigation
 
-Omit `navigation` for an automatic menu based on top-level content.
-To replace it, append ordered entries:
+Omit `navigation` for an automatic top-level menu, or append ordered entries:
 
 ::code-block
 ```toml
@@ -123,23 +111,20 @@ path = "https://github.com/example/my-docs"
 ```
 ::
 
-The local destinations above assume those pages exist in your site.
-Each item requires a nonempty `title` and either a `path` or nonempty `children`.
-Paths must be site-root paths or absolute HTTP(S) URLs without credentials.
-Relative paths, `mailto:` menu destinations, and protocol-relative URLs are
-not supported.
+Create the example destinations in your site before using this menu.
+Each item needs a nonempty `title` and either a `path` or nonempty `children`.
+Paths must be site-root paths or absolute HTTP(S) URLs without credentials;
+relative, `mailto:`, and protocol-relative menu links are unsupported.
 
-Groups with children become header dropdowns and expandable mobile groups.
-A group's optional `path` adds a landing-page link inside it. Add deeper
-`[[navigation.children.children]]` entries to nest groups. Order follows the
-configuration.
+Children create header dropdowns and expandable mobile groups. A group's
+optional `path` adds a landing-page link. Nest further with
+`[[navigation.children.children]]`. Items follow configuration order.
 
-Local paths omit the deployment prefix; it is added automatically. Page and
-fragment targets are validated, even in compatibility mode. Main-menu
-configuration does not replace or reorder the documentation sidebar tree.
+Omit the deployment prefix; it is added automatically. Local pages and
+fragments are validated, even in compatibility mode. This menu does not
+reorder or replace the sidebar tree.
 
-To hide the main menu entirely, put this among the top-level settings and
-remove all `[[navigation]]` tables:
+To hide the menu, remove all `[[navigation]]` tables and add this top-level setting:
 
 ::code-block
 ```toml
@@ -147,6 +132,5 @@ navigation = []
 ```
 ::
 
-Page-specific navigation labels and visibility belong in
-[front matter](../authoring/markdown.md#front-matter), not in this file. There are no
-additional supported theme, plugin, output-directory, or redirect settings.
+Set page labels and visibility in [front matter](../authoring/markdown.md#front-matter).
+Theme, plugin, output-directory, and redirect settings are unsupported.

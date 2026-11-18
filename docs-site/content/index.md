@@ -1,65 +1,71 @@
 # Publish documentation from Markdown
 
-SDS Site Generator turns Markdown and local assets into a
-searchable, static website using the SEI Design System's SDS Lite interface.
-Authors need one executable, not a web framework or a search service.
+Turn Markdown, images, and downloads into a documentation website with
+navigation and search, using the SEI Design System's SDS Lite interface.
 
-## Start here
+You need one executable: no Node.js, npm, Rust, account, or search service.
 
-1. [Install the generator](guides/start/installation.md) for macOS, Linux, or Windows.
-2. [Create and preview a site](guides/start/getting-started.md).
-3. Set the name, publishing URL, and menu in [site.toml](guides/start/configuration.md).
-4. [Organize pages and links](guides/authoring/structure.md).
-5. [Write Markdown](guides/authoring/markdown.md) and add [images and downloads](guides/authoring/assets.md).
-6. [Validate and publish](guides/publishing/deployment.md).
+## 1. Get the generator
 
-Already have a Markdown site? Read [importing existing content](guides/maintenance/importing.md).
-The [complete user guide](guides/index.md) is a quick reference to every topic.
+[Install the generator](guides/start/installation.md) for macOS, Linux, or
+Windows. Add it to your PATH so the commands below work from any directory.
 
-## Go further
+## 2. Create and preview your site
 
-Explore [Publish and operate](guides/publishing/index.md) for team workflows,
-CI, search, and hosting. Use [Maintain and migrate](guides/maintenance/index.md)
-when importing content or changing published URLs.
-The [user guide](guides/index.md) groups every topic by task in an expandable
-sidebar. [Write content](guides/authoring/index.md#how-this-sidebar-is-organized)
-shows the directory structure behind it.
-
-## A small input, a complete site
+In a terminal, create a site in a directory that does not already exist:
 
 ::code-block
-```text
-my-docs/
-  site.toml
-  content/
-    index.md
-    guides/
-      index.md
-      publishing.md
-  public/
-    images/
-      diagram.svg
+```sh
+sds-site-generator new my-docs --name "My documentation" --url "https://example.org/docs/"
+cd my-docs
+sds-site-generator preview .
 ```
 ::
 
-The output contains rendered pages, navigation, heading links, a table of
-contents, browser-based search, metadata, a sitemap, and a 404 page. Publish
-the generated files to any suitable static host.
+Change the example name and URL in `site.toml` before publishing.
 
-::callout{tone="info"}
-**This guide is a working example.** Its pages, menu, code examples, image,
-and download are ordinary generator inputs. Browse the `docs-site/` directory
-in the source repository to reuse them.
+Open the printed address (`http://127.0.0.1:4173/docs/` for this example).
+Keep preview running while you edit.
+
+## 3. Add your content
+
+Edit `content/index.md`, save, wait for a successful rebuild, and refresh
+your browser.
+
+| What you want to change | Where it goes | Guide |
+| --- | --- | --- |
+| Home page and other pages | Markdown files in `content/` | [Write Markdown](guides/authoring/markdown.md) |
+| Page order and sections | Files and directories in `content/` | [Organize pages](guides/authoring/structure.md) |
+| Images and downloadable files | `public/` | [Add images and downloads](guides/authoring/assets.md) |
+| Site name, publishing URL, and menu | `site.toml` | [Configure your site](guides/start/configuration.md) |
+
+Already have Markdown content? Follow [Import an existing site](guides/maintenance/importing.md).
+
+## 4. Check, build, and publish
+
+Stop preview with **Ctrl+C**. From your `my-docs` directory, run:
+
+::code-block
+```sh
+sds-site-generator check . --strict
+sds-site-generator build .
+```
 ::
 
-## What you do not need
+Fix any errors, then upload the **contents of `dist/`** to a static host with
+HTTPS and directory index support.
 
-Standalone generation, preview, and local search do not require Node.js, npm,
-Rust, an account, or an internet connection. Downloading an executable and
-deploying to a host are separate steps. An optional npm installer is available
-when a release has been published.
+See [Build and deploy](guides/publishing/deployment.md) for hosting instructions
+and a pre-publication checklist.
 
-The generator does not execute Vue components, provide a browser editor,
-optimize general image content, or deploy your website automatically.
-Search requires JavaScript and HTTP(S); the pages and navigation remain
-readable without JavaScript.
+## Find more help
+
+- [Create your first site](guides/start/getting-started.md): preview options and daily commands.
+- [User guide](guides/index.md): all topics, including CI, troubleshooting, and URL migrations.
+
+This guide is a working example. Browse `docs-site/` in the
+[source repository](https://github.com/cmu-sei/sds-site-generator/tree/main/docs-site)
+to reuse its pages, configuration, and assets.
+
+Pages and navigation work without JavaScript. Search requires JavaScript and
+HTTP(S); use preview or your host, not local HTML files.

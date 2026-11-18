@@ -1,12 +1,11 @@
 # Writing guide
 
-Every Markdown file in the content directory becomes a page. An index file is
-the home page for its directory.
+Each Markdown file in `content/` becomes a page; `index.md` is its directory's
+landing page.
 
 ## Headings
 
-Start with one main heading using a single hash. Use two hashes for sections,
-and three hashes for subsections. Do not skip heading levels.
+Use one `#` heading, then `##` sections and `###` subsections. Do not skip levels.
 
 ## Links
 
@@ -24,7 +23,7 @@ The generator checks page and heading links before publishing.
 
 ## Images
 
-Place images in the public directory and describe them in the image text:
+Put images in `public/` and describe their purpose:
 
 ::code-block
 ```markdown
@@ -32,15 +31,13 @@ Place images in the public directory and describe them in the image text:
 ```
 ::
 
-For a purely decorative image, use an empty description and the title
-`"decorative"`. Local PNG, JPEG, GIF, WebP, AVIF, and sanitized SVG images are supported.
-Image dimensions are added automatically. Large images must be resized before
-publishing; the generator does not optimize images for you.
+Use local PNG, JPEG, GIF, WebP, AVIF, or sanitized SVG; dimensions are added
+automatically. Resize and compress each image to at most **1 MiB (1,048,576 bytes)**.
+For decorative images, use an empty description and the title `"decorative"`.
 
 ## Optional metadata
 
-You do not need metadata for normal pages. YAML front matter between `---`
-lines and TOML between `+++` lines are both supported:
+Optional metadata goes first: YAML between `---` lines or TOML between `+++`:
 
 ::code-block
 ```yaml
@@ -54,8 +51,8 @@ tags: [documentation]
 ```
 ::
 
-YAML accepts additional metadata such as tags. Use `navigation: false` to hide
-a page from navigation without unpublishing it. The TOML equivalent is:
+YAML accepts extra metadata such as tags. `navigation: false` hides only the
+menu entry; the page stays published and searchable. For TOML:
 
 ::code-block
 ```toml
@@ -68,24 +65,22 @@ draft = false
 ```
 ::
 
-Unknown TOML settings cause an error. Fenced YAML examples in the page body
-are ordinary code examples, not metadata.
+Unknown TOML settings fail validation. Fenced YAML in the body is code, not metadata.
 
 ## Code examples
 
-The examples above use the shared code-block element. Wrap a fenced code block
-with `::code-block` and a closing `::` line. The default treatment is neutral;
-use `quality="good"` or `quality="bad"` for compliant/noncompliant examples.
-Examples render without JavaScript; the shared SDS runtime adds copy and
-fullscreen controls.
+Wrap a fenced example with `::code-block` and a closing `::` line, as above.
+The default is neutral; `quality="good"` and `quality="bad"` label compliant
+and noncompliant code. JavaScript adds copy/fullscreen controls; code stays
+readable without it.
 
-Put a lowercase language label on the opening fence to select syntax
-highlighting, for example `markdown`, `toml`, `powershell`, or `ini`.
+Choose highlighting with a lowercase fence label: `markdown`, `toml`,
+`powershell`, or `ini`.
 The bundled grammars also cover C, C++, Java, Perl, free-form Fortran,
 JavaScript, TypeScript, Python, shell, HTML, XML, JSON, YAML, and diff, with
 CSS, GLSL, SQL, regular-expression, and C++ macro dependency grammars.
 Use `text` or no label for plain text; unknown labels are not highlighted.
-Highlighting requires JavaScript and uses local assets, not an external service.
+Highlighting needs JavaScript and uses local assets.
 
 ## Callouts
 
@@ -105,12 +100,11 @@ Sizes are `xs`, `sm`, `md` (default), and `lg`.
 
 ## Importing existing content
 
-Safe semantic HTML, tables, named anchors, and legacy code-example wrappers
-are supported. Scripts and unsafe attributes are removed. Set
-`compatibility = true` in the site configuration to report legacy content
-issues as visible warnings instead of failing immediately. Review the report
-in `dist/_site/diagnostics.json`; `sds-site-generator check --strict` fails if
-warnings remain. Duplicate page URLs always stop the build.
+Semantic HTML, tables, anchors, and legacy code-example wrappers are supported;
+scripts and unsafe attributes are removed. Set `compatibility = true` in
+`site.toml` to turn selected import errors into warnings. Review
+`dist/_site/diagnostics.json`; `sds-site-generator check --strict` fails on
+warnings. Duplicate URLs always stop the build.
 
 ## Next steps
 

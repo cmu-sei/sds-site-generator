@@ -5,8 +5,8 @@ navigation:
 ---
 # Writing Markdown
 
-Write ordinary Markdown with a clear heading structure. Tables, strikethrough,
-smart punctuation, and the documented component wrappers are also supported.
+Write Markdown with clear headings. Tables, strikethrough, smart punctuation,
+and [component wrappers](components.md) are supported.
 
 ## A complete page
 
@@ -34,16 +34,15 @@ Ask your team which operating systems it supports.
 ```
 ::
 
-Start with one `#` main heading, then `##` sections and `###` subsections.
-Do not skip levels or add another H1. If there is no H1, one is generated from
-the page title. Metadata titles do not replace an explicitly written H1.
-The "On this page" list includes only `##` sections, not `###` or deeper
-subsections. All headings still receive linkable anchors.
+Use one `#` heading, then `##` sections and `###` subsections without skipping
+levels. A missing H1 is generated from the page title; metadata does not replace
+an existing H1. All headings have anchors, but only `##` sections appear in
+"On this page."
 
 ## Front matter
 
-Optional metadata must be the first block in the file. Use YAML between `---`
-lines (as above), or TOML between `+++` lines:
+Put optional metadata first: YAML between `---` lines (above), or TOML between
+`+++` lines:
 
 ::code-block
 ```toml
@@ -65,13 +64,12 @@ navigation = { title = "Installation" }
 | `draft` | `false`; `true` excludes the page from output, navigation, sitemap, and search |
 | `navigation` | Visible; `false` hides the page from navigation, or an object sets `title` |
 
-Every published page needs a nonempty description or an introductory paragraph.
-A hidden page is **still published and searchable**; this is not access control.
-Links to drafts fail validation, and the home page cannot be a draft.
+Every published page needs a description or introductory paragraph. Hidden pages
+are **still published and searchable**, not private. Links to drafts fail
+validation; the home page cannot be a draft.
 
-YAML accepts additional metadata such as `tags` for import compatibility, but
-it does not enable tagging or execute anything. Unknown top-level TOML metadata
-fields fail validation. Metadata blocks are limited to 64 KiB.
+YAML accepts extra metadata such as `tags`; only the fields above affect output.
+Unknown top-level TOML fields fail validation. Metadata is limited to 64 KiB.
 
 ## Text, lists, and quotations
 
@@ -91,9 +89,8 @@ Use ~~strikethrough~~ sparingly.
 ```
 ::
 
-Separate paragraphs and blocks with blank lines. Smart punctuation converts
-straight quotes and punctuation sequences in prose; code remains literal.
-Use backslash escapes to show Markdown punctuation, for example `\*literal\*`.
+Separate blocks with blank lines. Smart punctuation converts prose quotes and
+punctuation, leaving code literal. Escape Markdown with backslashes: `\*literal\*`.
 
 ## Tables
 
@@ -106,15 +103,14 @@ Use backslash escapes to show Markdown punctuation, for example `\*literal\*`.
 ```
 ::
 
-Include a header row and an explanatory sentence when needed. Wide tables
-scroll horizontally. With JavaScript, simple tables gain keyboard-accessible
-header sorting; complex tables with merged cells or interactive headers stay
-static. Prefer lists when the content is not genuinely tabular.
+Include a header row. Wide tables scroll horizontally; JavaScript adds
+keyboard-accessible sorting to simple tables. Tables with merged cells or
+interactive headers stay static. Use lists for non-tabular content.
 
 ## Code
 
-Use inline backticks for short literals. For block examples, put a
-language-tagged fence inside the shared code-block wrapper:
+Use inline backticks for short literals. Wrap language-tagged fences for
+copy and fullscreen controls:
 
 ::code-block
 ````markdown
@@ -126,33 +122,27 @@ sds-site-generator check . --strict
 ````
 ::
 
-The wrapper supplies copy/fullscreen controls and supports a title, compliance
-badge, or short/complete examples. See the
-[code-block reference](components.md#code-examples).
-This documentation uses the wrapper for all block examples.
-Plain Markdown fences are still supported as keyboard-focusable, horizontally
-scrollable code, but do not receive those controls.
-Syntax highlighting is bundled locally and selected by the fence's language
-label, not by the wrapper. See [supported languages and aliases](components.md#syntax-highlighting),
-including Markdown, TOML, PowerShell, and INI. Use `text` for plain output;
-unknown or missing labels are not highlighted. Code remains readable without
-JavaScript.
+The [code-block reference](components.md#code-examples) covers titles, compliance
+badges, and short/complete examples. Plain fences remain keyboard-focusable and
+horizontally scrollable, without copy or fullscreen controls.
 
-To show a triple-backtick example without rendering it, enclose it in a
-four-backtick fence. Component syntax inside a code fence also stays literal.
+The fence's [language label](components.md#syntax-highlighting) selects bundled
+highlighting. Use `text` for plain output; unknown or missing labels stay
+unhighlighted. Code remains readable without JavaScript.
+
+Enclose triple-backtick examples in four-backtick fences. Component syntax
+inside a fence stays literal.
 
 ## HTML and unsupported extensions
 
-Semantic HTML can supplement Markdown, for example `<sup>`, `<sub>`, or an
-explicit heading ID. HTML headings, links, images, and text go through the same
-validation and search processing as Markdown.
+Add semantic HTML such as `<sup>`, `<sub>`, or explicit heading IDs. HTML uses
+the same heading, link, image, and search processing as Markdown.
 
-HTML is sanitized, not executed. Scripts, forms, iframes, event handlers,
-unsafe attributes, and unsupported markup/styles are removed and diagnosed.
-Only conservative inline layout styles are retained; arbitrary styling is
-not a supported theme mechanism.
+Sanitization removes and diagnoses scripts, forms, iframes, event handlers,
+unsafe attributes, and unsupported markup/styles. Only conservative inline
+layout styles are retained, not arbitrary theme styling.
 
-Do not rely on footnotes, task-list checkboxes, math rendering, heading
-attribute shorthand, automatic bare-URL linking, includes, templates, or
-arbitrary Vue/MDC widgets. These extensions are not enabled. Use ordinary
-links and the [supported special syntax](components.md) instead.
+Use explicit links and [supported components](components.md).
+Footnotes, task-list checkboxes, math rendering, heading attribute shorthand,
+automatic bare-URL linking, includes, templates, and arbitrary Vue/MDC widgets
+are unsupported.

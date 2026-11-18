@@ -52,8 +52,8 @@ Each child has its own order and may use a shorter `navigation.title`.
 Expand a group to browse, or visit a child to open its group automatically.
 On small screens, use **Open site navigation** to see the same tree.
 
-This is the generator's normal directory-based navigation, not a special theme
-or custom sidebar configuration. The header menu is configured separately in
+The generator builds this navigation from your directory structure.
+Configure the header menu separately in
 [site.toml](../start/configuration.md#main-navigation).
 
 When your content is ready, continue to

@@ -3,9 +3,9 @@ order: 4
 ---
 # Images and downloads
 
-Put images and attachments in `public/`. They are copied to the output root,
-not to a `/public/` URL. Use site-root links to keep them independent of the
-page's nesting and deployment prefix.
+Put images and attachments in `public/`; they copy to the output root.
+Link with `/images/...`, not `/public/images/...`, to work across page nesting
+and deployment prefixes.
 
 ## Add an image
 
@@ -28,15 +28,14 @@ image, explicitly use empty alt text and the title `decorative`:
 ```
 ::
 
-The generator adds dimensions when it can read them, plus lazy loading and
-asynchronous decoding. Referenced local images must have readable dimensions
-and be at most **1 MiB (1,048,576 bytes)** each. Resize and compress images
-yourself: the generator is not a general image optimizer.
+Referenced local images need readable dimensions and must be at most
+**1 MiB (1,048,576 bytes)** each. Resize and compress them first. The generator
+adds dimensions, lazy loading, and asynchronous decoding.
 
 Use local PNG, JPEG, GIF, WebP, AVIF, or sanitized SVG. Remote images produce
-diagnostics because their availability and dimensions cannot be validated.
-Prefer converting TIFF to a modern format; legacy TIFF references get PNG
-aliases, while the original files remain downloadable.
+diagnostics: their availability and dimensions cannot be validated. Convert
+TIFF to a modern format; legacy TIFF references get PNG aliases and retain
+the originals as downloads.
 
 ## Add a download
 
@@ -49,8 +48,7 @@ For `public/downloads/author-checklist.txt`, write:
 ::
 
 [Download the author checklist](/downloads/author-checklist.txt).
-Whether a file opens or downloads depends on the browser and host headers.
-The generator does not force a download.
+Browser and host headers determine whether it opens or downloads.
 
 ## Allowed files
 
@@ -62,10 +60,9 @@ The generator does not force a download.
 | Source attachments | `.c`, `.cpp`, `.h`, `.java` |
 | Fonts | `.woff2` |
 
-Author-provided JavaScript and CSS are not published. Unsupported extensions
-are errors in normal mode. SVG and HTML attachments are sanitized; removals
-are diagnosed. HTML attachments are downloads/standalone documents, not
-Markdown pages in the navigation or search index.
+Author-provided JavaScript and CSS are not published; unsupported extensions
+fail in normal mode. SVG and HTML are sanitized with diagnostics for removals.
+HTML attachments are standalone documents, excluded from navigation and search.
 
 ## Names and output collisions
 
@@ -74,12 +71,9 @@ but hidden path segments, control characters, backslashes, `:`, `?`, and `#`
 are not. Percent-encode spaces in Markdown URLs, or enclose the destination in
 angle brackets.
 
-Do not put files under `public/_site/` or provide `public/robots.txt`.
-Avoid all generated-output collisions, including page `index.html` files,
-`sitemap.xml`, and generated `.gz` variants. The build rejects collisions
-instead of overwriting output.
+`public/_site/` and `public/robots.txt` are reserved. Builds reject collisions
+with generated output, including page `index.html` files, `sitemap.xml`, and
+`.gz` variants.
 
-The shell uses its bundled favicon and styling. Uploading `public/favicon.svg`
-does not replace the shell's favicon, and publishing a font does not apply it
-automatically. There are no configuration fields for custom themes, favicon
-selection, or custom scripts.
+Bundled styling and the favicon are fixed. Public assets do not override the
+theme; custom themes, favicon selection, and scripts are unsupported.

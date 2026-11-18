@@ -1,13 +1,15 @@
 # Publishing
 
-The generator produces ordinary files. Any static website host can serve them.
+Publish your site to a static host with HTTPS and directory index support.
 
 ## Set your address
 
-Open site.toml and replace the example URL with your final website address.
-Include a subdirectory if you use one, such as https://example.org/my-docs/.
+In `site.toml`, set `url` to your public address, including any subdirectory:
+`https://example.org/my-docs/`.
 
 ## Check and build
+
+Stop preview with Ctrl+C, then run:
 
 ::code-block
 ```sh
@@ -16,16 +18,12 @@ sds-site-generator build .
 ```
 ::
 
-Upload the contents of dist to your host. For GitHub Pages, use an Actions
-deployment and upload dist as the Pages artifact.
+Fix any errors, then upload the **contents of `dist/`** to your host.
+For GitHub Pages, use GitHub Actions with `dist/` as the Pages artifact.
 
 ## Before sharing
 
 - Check your content for accuracy and clarity.
-- Test keyboard navigation and a screen reader.
-- Test your deployed pages on a phone.
-- Run Lighthouse against the deployed URL.
-
-The generator supplies accessible patterns and technical SEO defaults.
-Accessibility conformance, search rankings, and perfect Lighthouse scores still
-depend on your content, hosting, and testing.
+- Check nested pages, links, images, downloads, search, and a nonexistent URL.
+- Test the deployed site on a phone, with a keyboard, and with a screen reader.
+- Run automated checks such as Lighthouse alongside these manual tests.

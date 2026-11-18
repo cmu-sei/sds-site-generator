@@ -3,8 +3,8 @@ order: 1
 ---
 # Pages and links
 
-The directory layout defines page URLs and the documentation tree. Keep source
-filenames predictable so links remain stable as the site grows.
+Your directory layout defines page URLs and the documentation tree.
+Use predictable filenames to keep links stable.
 
 ## Arrange the files
 
@@ -25,9 +25,8 @@ my-docs/
 ```
 ::
 
-Only lowercase `.md` extensions are accepted in `content/`; place all other
-files in `public/`. Use UTF-8 text. Symbolic links are not allowed in the content
-or public trees, and `site.toml` cannot be a symbolic link.
+Use UTF-8 files with lowercase `.md` extensions in `content/`; put other files
+in `public/`. Do not use symbolic links in either directory or for `site.toml`.
 
 | Source under `content/` | Site route |
 | --- | --- |
@@ -36,14 +35,13 @@ or public trees, and `site.toml` cannot be a symbolic link.
 | `2.guides/2.installation.md` | `/guides/installation/` |
 | `3.reference.md` | `/reference/` |
 
-Numeric prefixes followed by a dot are removed from URLs. Other words are
-lowercased and separated by hyphens; underscores also become hyphens in normal
-mode. For example, `API Reference.md` becomes `/api-reference/`.
-Compatibility mode preserves underscores.
+Routes drop numeric prefixes followed by a dot, lowercase words, and replace
+spaces and underscores with hyphens: `API Reference.md` becomes `/api-reference/`.
+Compatibility mode keeps underscores.
 
-An `index.md` is a directory's landing page. The home route must have a
-published page. Directories group descendants even without a landing page,
-but adding an index gives the group a useful title and destination.
+`index.md` is a directory's landing page. The home route needs a published page.
+Other directories group descendants without an index, but adding one gives
+the group a title and destination.
 
 Routes must be unique: `guide.md` and `guide/index.md` collide. `/search/`,
 `/404/`, and routes under `/_site/` are reserved. There is no redirect setting;
@@ -51,19 +49,16 @@ renaming a source may require redirects supplied by your host.
 
 ## Control ordering and labels
 
-Sibling pages sort by front-matter `order` first (default `0`), then source
-path. Smaller orders come first. Numeric filename prefixes participate in the
-source-path ordering, not numeric comparison: use `01.`, `02.`, ..., `10.`
-consistently, or set explicit `order` values.
+Siblings sort by front-matter `order` (default `0`, smallest first), then source
+path. Filename prefixes sort as text, not numbers: use `01.`, `02.`, ..., `10.`
+consistently, or set `order`.
 
-For predictable group ordering, give each directory an index page with an
-`order`. Page titles label navigation by default; override the label with
-`navigation.title`, or use `navigation: false` to hide the page.
+Set group order on each directory's index page. Page titles label navigation;
+override with `navigation.title`, or hide a page with `navigation: false`.
 
-The default top menu comes from top-level content. Within a section, a sidebar
-shows its descendants. Previous/next links follow the visible section tree.
-[Custom main navigation](../start/configuration.md#main-navigation) changes the top
-menu, not the content tree.
+Top-level content supplies the default main menu; section descendants supply
+the sidebar and previous/next links. [Custom main navigation](../start/configuration.md#main-navigation)
+changes the menu, not the content tree.
 
 ## Link to pages
 
@@ -78,9 +73,8 @@ including any numeric prefix:
 ```
 ::
 
-These are illustrative paths; adjust them relative to the file you are editing.
-Links ending in `.md` resolve relative to the source file. Other relative links
-resolve relative to the generated page URL, which may be different.
+Adjust these example paths to your files. `.md` links resolve from the source
+file; other relative links resolve from the generated page URL.
 
 Site-root links are often clearer:
 
@@ -96,8 +90,8 @@ Site-root links are often clearer:
 
 Do not include the deployment prefix: with `url = "https://example.org/docs/"`,
 `/guides/installation/` becomes `/docs/guides/installation/` automatically.
-Local pages, files, and heading fragments are checked; external availability
-is not. Use explicit `https://`, not protocol-relative `//` URLs.
+Validation checks local pages, files, and fragments, not external availability.
+Use `https://`, not protocol-relative `//` URLs.
 
 ## Link to headings
 
