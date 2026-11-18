@@ -11,7 +11,7 @@ const SDS_DOCUMENTATION_CSS: &[u8] = include_bytes!("../vendor/sds-lite/document
 const SDS_DOCUMENTATION_JS: &[u8] = include_bytes!("../vendor/sds-lite/documentation.js");
 const SDS_LICENSE: &[u8] = include_bytes!("../vendor/sds-lite/LICENSE");
 const SDS_WORDMARK: &[u8] = include_bytes!("../vendor/sds-lite/package/assets/sei-wordmark.svg");
-const LIST_ORDERED: &str = r#"<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 12h10"/><path d="M11 19h10"/><path d="M4 4h1v5"/><path d="M4 9h2"/><path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02"/></svg>"#;
+const FORMAT_LIST_BULLETED: &str = r#"<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M9 19v-2h12v2zm0-6v-2h12v2zm0-6V5h12v2zM5 20q-.825 0-1.412-.587T3 18t.588-1.412T5 16t1.413.588T7 18t-.587 1.413T5 20m0-6q-.825 0-1.412-.587T3 12t.588-1.412T5 10t1.413.588T7 12t-.587 1.413T5 14M3.588 7.413Q3 6.825 3 6t.588-1.412T5 4t1.413.588T7 6t-.587 1.413T5 8t-1.412-.587"/></svg>"#;
 const SHIELD: &str = r#"<svg aria-hidden="true" viewBox="0 0 16 16"><path d="M14.5625 2.625C15.125 2.875 15.5 3.40625 15.5 4C15.5 12 9.59375 16 7.96875 16C6.40625 16 0.5 12.0625 0.5 4C0.5 3.40625 0.84375 2.875 1.40625 2.625L7.40625 0.125C7.5625 0.0625 7.8125 0.03125 8 0.03125C8.15625 0.03125 8.40625 0.0625 8.5625 0.125L14.5625 2.625ZM11 6.25C11 6.03125 10.8125 5.5 10.25 5.5C10.0312 5.5 9.8125 5.5625 9.65625 5.75L7.1875 8.625L6.25 7.71875C6.125 7.5625 5.9375 7.5 5.75 7.5C5.3125 7.5 5 7.84375 5 8.25C5 8.46875 5.0625 8.65625 5.21875 8.78125L6.71875 10.2812C6.84375 10.4062 7.03125 10.5 7.25 10.5C7.3125 10.5 7.59375 10.5 7.8125 10.25L10.8125 6.75C10.9375 6.625 11 6.4375 11 6.25Z" fill="currentColor"></path></svg>"#;
 
 pub(crate) fn write(site: &Site, output: &Path) -> Result<()> {
@@ -483,7 +483,7 @@ fn toc(page: &Page) -> String {
         return String::new();
     }
     let mut result = format!(
-        "<nav class=\"sds-app-toc\" aria-label=\"On this page\"><strong>{LIST_ORDERED}On this page</strong><ul>",
+        "<nav class=\"sds-app-toc\" aria-label=\"On this page\"><strong>{FORMAT_LIST_BULLETED}On this page</strong><ul>",
     );
     for heading in headings {
         result.push_str(&format!(

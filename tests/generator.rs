@@ -210,6 +210,20 @@ fn documentation_toc_lists_only_sections_and_section_landing_links_are_not_dupli
     let document = kuchiki::parse_html()
         .one(fs::read_to_string(root.join("dist/guides/nested/index.html")).unwrap());
     let toc = document.select_first("main .sds-app-toc").unwrap();
+    let icon = toc.as_node().select_first("strong > svg").unwrap();
+    let attributes = icon.attributes.borrow();
+    assert_eq!(attributes.get("aria-hidden"), Some("true"));
+    assert_eq!(attributes.get("viewBox"), Some("0 0 24 24"));
+    assert_eq!(attributes.get("fill"), Some("currentColor"));
+    assert_eq!(
+        icon.as_node()
+            .select_first("path")
+            .unwrap()
+            .attributes
+            .borrow()
+            .get("d"),
+        Some("M9 19v-2h12v2zm0-6v-2h12v2zm0-6V5h12v2zM5 20q-.825 0-1.412-.587T3 18t.588-1.412T5 16t1.413.588T7 18t-.587 1.413T5 20m0-6q-.825 0-1.412-.587T3 12t.588-1.412T5 10t1.413.588T7 12t-.587 1.413T5 14M3.588 7.413Q3 6.825 3 6t.588-1.412T5 4t1.413.588T7 6t-.587 1.413T5 8t-1.412-.587")
+    );
     assert_eq!(
         toc.as_node()
             .select("a")
