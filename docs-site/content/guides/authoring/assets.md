@@ -3,9 +3,8 @@ order: 4
 ---
 # Images and downloads
 
-Put images and attachments in `public/`; they copy to the output root.
-Link with `/images/...`, not `/public/images/...`, to work across page nesting
-and deployment prefixes.
+Put images and attachments in `public/`. Link with `/images/...`, not
+`/public/images/...`; deployment prefixes are added automatically.
 
 ## Add an image
 
@@ -19,23 +18,22 @@ For `public/images/authoring-flow.svg`, write:
 
 ![Write content, check it, then publish the generated site](/images/authoring-flow.svg)
 
-Describe the image's purpose, not just its appearance. For a purely decorative
-image, explicitly use empty alt text and the title `decorative`:
+Describe the image's purpose. For decorative images, use empty alt text and
+the title `decorative`:
 
 ::code-block
 ```markdown
-![](/images/decoration.png "decorative")
+![](/images/decoration.svg "decorative")
 ```
 ::
 
-Referenced local images need readable dimensions and must be at most
-**1 MiB (1,048,576 bytes)** each. Resize and compress them first. The generator
-adds dimensions, lazy loading, and asynchronous decoding.
+![](/images/decoration.svg "decorative")
 
-Use local PNG, JPEG, GIF, WebP, AVIF, or sanitized SVG. Remote images produce
-diagnostics: their availability and dimensions cannot be validated. Convert
-TIFF to a modern format; legacy TIFF references get PNG aliases and retain
-the originals as downloads.
+Referenced local images need readable dimensions and must be at most
+**1 MiB (1,048,576 bytes)** each. The generator adds dimensions and lazy loading.
+
+Use local files in the [supported formats](#allowed-files); remote images produce
+diagnostics. TIFF references get PNG aliases; originals remain downloadable.
 
 ## Add a download
 
@@ -50,6 +48,9 @@ For `public/downloads/author-checklist.txt`, write:
 [Download the author checklist](/downloads/author-checklist.txt).
 Browser and host headers determine whether it opens or downloads.
 
+For imported download links, see
+[compatibility mode's link resolution](../start/configuration.md#what-changes).
+
 ## Allowed files
 
 | Category | Extensions |
@@ -60,9 +61,10 @@ Browser and host headers determine whether it opens or downloads.
 | Source attachments | `.c`, `.cpp`, `.h`, `.java` |
 | Fonts | `.woff2` |
 
-Author-provided JavaScript and CSS are not published; unsupported extensions
-fail in normal mode. SVG and HTML are sanitized with diagnostics for removals.
-HTML attachments are standalone documents, excluded from navigation and search.
+Unsupported extensions, including author-provided JavaScript and CSS, fail
+normal validation. SVG and HTML are sanitized; HTML attachments are standalone
+files, not documentation pages. See [Search and hosting](../publishing/search-and-hosting.md#write-for-discoverability)
+for attachment discoverability.
 
 ## Names and output collisions
 
@@ -75,5 +77,4 @@ angle brackets.
 with generated output, including page `index.html` files, `sitemap.xml`, and
 `.gz` variants.
 
-Bundled styling and the favicon are fixed. Public assets do not override the
-theme; custom themes, favicon selection, and scripts are unsupported.
+The bundled theme and favicon cannot be overridden through public assets.

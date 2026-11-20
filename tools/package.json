@@ -6,9 +6,10 @@
     "build:highlight": "node build-highlight.mjs",
     "test:components": "node components.test.mjs",
     "test:highlight": "node --test highlight.test.mjs",
-    "test": "node --test search.test.mjs",
-    "audit": "node audit.mjs",
-    "test:search-ui": "node search-ui.test.mjs"
+    "test:search": "node --test search.test.mjs",
+    "audit:site": "node audit.mjs",
+    "test:search-ui": "node search-ui.test.mjs",
+    "audit:cert": "node audit-cert.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

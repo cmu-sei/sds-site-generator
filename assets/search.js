@@ -130,3 +130,12 @@ function setupSearch(form) {
 }
 
 document.querySelectorAll("[data-site-search]").forEach(setupSearch);
+
+document.addEventListener("keydown", (event) => {
+  if (event.altKey || event.shiftKey || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+  const opener = document.querySelector("[data-search-open]");
+  if (!opener) return;
+  event.preventDefault();
+  opener.click();
+  document.querySelector('#site-search-dialog [name="q"]')?.focus();
+});

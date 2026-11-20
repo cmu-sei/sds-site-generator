@@ -1,12 +1,161 @@
 import assert from 'node:assert/strict'
-import { join } from 'node:path'
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { delimiter, join } from 'node:path'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import test from 'node:test'
 import { executablePath, platforms, selectPlatform } from '../scripts/platforms.mjs'
-import { buildPages, metadata, releaseIdentity, root, run, verifyBundle } from '../scripts/package.mjs'
+import { buildPages, metadata, releaseIdentity, root, run, runCargo, verifyBundle } from '../scripts/package.mjs'
+
+function rustFixture() {
+  const temporary = mkdtempSync(join(tmpdir(), 'site-generator-rust-'))
+  const env = { ...process.env, PATH: join(temporary, 'empty'), CARGO_HOME: join(temporary, 'cargo home'), RUSTUP_HOME: join(temporary, 'rustup home') }
+  delete env.RUSTUP_TOOLCHAIN
+  for (const key of Object.keys(env)) {
+    if (key !== 'PATH' && key.toLowerCase() === 'path') delete env[key]
+  }
+  const install = bin => {
+    mkdirSync(bin, { recursive: true })
+    for (const name of ['cargo', 'rustc']) {
+      const executable = join(bin, `${name}${process.platform === 'win32' ? '.exe' : ''}`)
+      if (process.platform === 'win32') cpSync(process.execPath, executable)
+      else symlinkSync(process.execPath, executable)
+    }
+  }
+  return { temporary, env, install }
+}
+
+const rustProbe = ['-e', `
+  const { execFileSync } = require('node:child_process');
+  const path = Object.entries(process.env).find(([key]) => key.toLowerCase() === 'path')[1];
+  process.stdout.write(JSON.stringify({ path, rustc: execFileSync('rustc', ['--version'], { encoding: 'utf8' }).trim() }));
+`]
+
+test('developer builds find Cargo and rustc in CARGO_HOME without changing the parent PATH', () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    const bin = join(env.CARGO_HOME, 'bin')
+    install(bin)
+    const originalPath = env.PATH
+    const result = JSON.parse(runCargo(rustProbe, { env, encoding: 'utf8', stdio: 'pipe' }))
+    assert.equal(result.path.split(delimiter)[0], bin)
+    assert.equal(result.rustc, process.version)
+    assert.equal(env.PATH, originalPath)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('developer builds find a standalone stable toolchain when Rust proxies are absent', () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    const bin = join(env.RUSTUP_HOME, 'toolchains', 'stable-test-host', 'bin')
+    install(bin)
+    const result = JSON.parse(runCargo(rustProbe, { env, encoding: 'utf8', stdio: 'pipe' }))
+    assert.equal(result.path.split(delimiter)[0], bin)
+    assert.equal(result.rustc, process.version)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('standalone Unix toolchains can load LLVM-style shared libraries in build subprocesses', { skip: !['darwin', 'linux'].includes(process.platform) }, () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    const toolchain = join(env.RUSTUP_HOME, 'toolchains', 'stable-test-host')
+    install(join(toolchain, 'bin'))
+    const library = join(toolchain, 'lib')
+    const tools = join(library, 'rustlib', 'test-host', 'bin')
+    mkdirSync(tools, { recursive: true })
+    const source = join(temporary, 'probe.c')
+    const main = join(temporary, 'main.c')
+    const probe = join(tools, 'strip-probe')
+    writeFileSync(source, 'int probe(void) { return 0; }\n')
+    writeFileSync(main, 'int probe(void); int main(void) { return probe(); }\n')
+    const mac = process.platform === 'darwin'
+    const libraryFile = mac ? 'libstrip-probe.dylib' : 'libstrip-probe.so'
+    const libraryFlags = mac ? ['-dynamiclib', '-Wl,-install_name,@rpath/libstrip-probe.dylib'] : ['-shared', '-fPIC', '-Wl,-soname,libstrip-probe.so']
+    const rpath = mac ? '@loader_path/../lib' : '$ORIGIN/../lib'
+    run('/usr/bin/cc', [...libraryFlags, source, '-o', join(library, libraryFile)], { stdio: 'pipe' })
+    run('/usr/bin/cc', [main, '-L', library, '-lstrip-probe', `-Wl,-rpath,${rpath}`, '-o', probe], { stdio: 'pipe' })
+    const libraryKey = mac ? 'DYLD_FALLBACK_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
+    env[libraryKey] = join(temporary, 'existing libraries')
+    const originalPath = env[libraryKey]
+    const result = runCargo(['-e', `
+      require('node:child_process').execFileSync(${JSON.stringify(probe)});
+      process.stdout.write('stripping succeeded');
+    `], { env, encoding: 'utf8', stdio: 'pipe' })
+    assert.equal(result, 'stripping succeeded')
+    assert.equal(env[libraryKey], originalPath)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('developer builds preserve explicit and default rustup toolchain selections', () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    install(join(env.RUSTUP_HOME, 'toolchains', 'stable-test-host', 'bin'))
+    const selected = 'nightly-test-host'
+    const bin = join(env.RUSTUP_HOME, 'toolchains', selected, 'bin')
+    install(bin)
+    writeFileSync(join(env.RUSTUP_HOME, 'settings.toml'), `default_toolchain = "${selected}"\n`)
+    for (const [selection, expected] of [
+      [{}, selected],
+      [{ RUSTUP_TOOLCHAIN: selected }, selected],
+      [{ RUSTUP_TOOLCHAIN: 'stable-test-host' }, 'stable-test-host'],
+      [{ RUSTUP_TOOLCHAIN: 'stable' }, 'stable-test-host'],
+    ]) {
+      const result = JSON.parse(runCargo(rustProbe, { env: { ...env, ...selection }, encoding: 'utf8', stdio: 'pipe' }))
+      assert.equal(result.path.split(delimiter)[0], join(env.RUSTUP_HOME, 'toolchains', expected, 'bin'))
+    }
+    env.RUSTUP_TOOLCHAIN = 'missing-toolchain'
+    assert.throws(() => runCargo(rustProbe, { env, stdio: 'pipe' }), /missing-toolchain/)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('developer builds prefer Cargo on PATH and preserve build failures', () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    env.PATH = join(temporary, 'existing bin')
+    install(env.PATH)
+    install(join(env.CARGO_HOME, 'bin'))
+    const result = JSON.parse(runCargo(rustProbe, { env, encoding: 'utf8', stdio: 'pipe' }))
+    assert.equal(result.path, env.PATH)
+    assert.throws(() => runCargo(['-e', 'process.exit(7)'], { env, stdio: 'pipe' }), error => error.status === 7)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('developer builds report missing or ambiguous Rust installations explicitly', () => {
+  const { temporary, env, install } = rustFixture()
+  try {
+    assert.throws(() => runCargo(rustProbe, { env, stdio: 'pipe' }), /Install it from https:\/\/rustup\.rs/)
+    for (const name of ['stable-first-host', 'stable-second-host']) install(join(env.RUSTUP_HOME, 'toolchains', name, 'bin'))
+    assert.throws(() => runCargo(rustProbe, { env, stdio: 'pipe' }), /Multiple stable Rust toolchains/)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
+test('generator test command discovers Cargo and forwards test arguments', { skip: !['darwin', 'linux'].includes(process.platform) }, () => {
+  const { temporary, env } = rustFixture()
+  try {
+    const bin = join(env.CARGO_HOME, 'bin')
+    mkdirSync(bin, { recursive: true })
+    const source = join(temporary, 'cargo.c')
+    writeFileSync(source, '#include <stdio.h>\nint main(int argc, char **argv) { for (int i = 1; i < argc; i++) puts(argv[i]); return 0; }\n')
+    run('/usr/bin/cc', [source, '-o', join(bin, 'cargo')], { stdio: 'pipe' })
+    const output = run(process.execPath, [join(root, 'scripts/package.mjs'), 'test', '--help'], { env, encoding: 'utf8', stdio: 'pipe' })
+    assert.deepEqual(output.trim().split('\n'), ['test', '--all-targets', '--locked', '--help'])
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
 
 test('npm launcher selects the native binary for all supported platforms', () => {
   assert.equal(platforms.length, 6)
@@ -151,6 +300,14 @@ test('workflows use direct PR checks, tested release artifacts, and isolated Pag
   assert.equal(workflows.pages.jobs.build.permissions.pages, 'read')
   assert.equal(workflows.pages.jobs.deploy.permissions.pages, 'write')
   assert.equal(workflows.pages.jobs.deploy.permissions['id-token'], 'write')
+  const nativeCommands = workflows.check.jobs.native.steps.map(step => step.run)
+  const developerBuild = nativeCommands.indexOf('npm run build')
+  assert.ok(developerBuild >= 0, 'the native matrix must exercise the developer build command')
+  const distributionStage = nativeCommands.indexOf('node scripts/package.mjs stage "target/$RUST_TARGET/release/$EXECUTABLE"')
+  assert.ok(developerBuild < distributionStage, 'the host developer build must not replace the final target-specific distribution binary')
+  const rebuildCommands = ['npm test', 'npm run build', 'npm run build:generator']
+  assert.ok(nativeCommands.slice(distributionStage + 1).every(command => !rebuildCommands.includes(command)), 'native artifact checks must not rebuild the host executable')
+  assert.ok(workflows.check.jobs.package.steps.every(step => !rebuildCommands.includes(step.run)), 'release assembly must preserve the downloaded native executables')
   for (const workflow of Object.values(workflows)) {
     assert.ok(!Object.hasOwn(workflow.on, 'pull_request_target'))
     for (const job of Object.values(workflow.jobs)) {

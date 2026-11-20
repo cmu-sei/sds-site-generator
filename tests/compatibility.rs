@@ -58,6 +58,153 @@ fn compatible_fixture() -> tempfile::TempDir {
 }
 
 #[test]
+fn legacy_relative_downloads_use_public_root_only_after_local_resolution() {
+    for compatibility in [false, true] {
+        let temp = compatible_fixture();
+        let root = temp.path();
+        fs::write(
+            root.join("site.toml"),
+            format!("name = 'Downloads'\nurl = 'https://example.org/docs/'\ncompatibility = {compatibility}\n"),
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("public/attachments")).unwrap();
+        fs::create_dir_all(root.join("public/guide/attachments")).unwrap();
+        fs::write(root.join("public/attachments/read me.txt"), "Root download").unwrap();
+        fs::write(root.join("public/attachments/manual.txt"), "Root manual").unwrap();
+        fs::write(
+            root.join("public/guide/attachments/manual.txt"),
+            "Local manual",
+        )
+        .unwrap();
+        fs::write(
+            root.join("content/guide.md"),
+            "# Guide\n\nImported downloads.\n\n[Root](attachments/read%20me.txt?download=1#notes)\n\n[Local](attachments/manual.txt)\n\n[Missing](attachments/missing.txt)\n",
+        )
+        .unwrap();
+        let result = site_generator::build(root);
+        if !compatibility {
+            assert!(
+                format!("{:#}", result.err().unwrap())
+                    .contains("Link attachments/read%20me.txt?download=1#notes")
+            );
+            continue;
+        }
+        let report = result.unwrap();
+        let document = kuchiki::parse_html()
+            .one(fs::read_to_string(root.join("dist/guide/index.html")).unwrap());
+        let links = document
+            .select("article a[href*='attachments/']")
+            .unwrap()
+            .map(|node| node.attributes.borrow().get("href").unwrap().to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            links,
+            [
+                "/docs/attachments/read%20me.txt?download=1#notes",
+                "/docs/guide/attachments/manual.txt",
+                "/docs/guide/attachments/missing.txt",
+            ]
+        );
+        assert_eq!(report.warnings.len(), 1);
+        assert!(
+            report.warnings[0]
+                .message
+                .contains("attachments/missing.txt")
+        );
+    }
+}
+
+#[test]
+fn legacy_heading_fragments_preserve_punctuation_underscores_and_duplicate_order() {
+    let temp = compatible_fixture();
+    fs::write(
+        temp.path().join("content/anchors.md"),
+        "# Heading_V\n\nAn imported page.\n\n## Noncompliant Code Example\n\nFirst.\n\n## Noncompliant Code Example\n\nSecond.\n\n## Noncompliant Code Example\n\nThird.\n\n## C++ / C: Rules\n\nLanguage rules.\n\n## 2013\n\nA year.\n\n## Conference/Workshop Proceedings\n\nProceedings.\n",
+    )
+    .unwrap();
+    site_generator::build(temp.path()).unwrap();
+    let document = kuchiki::parse_html()
+        .one(fs::read_to_string(temp.path().join("dist/anchors/index.html")).unwrap());
+    let ids = document
+        .select("article h1,article h2")
+        .unwrap()
+        .map(|node| node.attributes.borrow().get("id").unwrap().to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ids,
+        [
+            "heading_v",
+            "noncompliant-code-example",
+            "noncompliant-code-example-1",
+            "noncompliant-code-example-2",
+            "c-c-rules",
+            "_2013",
+            "conferenceworkshop-proceedings",
+        ]
+    );
+}
+
+#[test]
+fn raw_html_code_in_tables_remains_literal_while_prose_gets_smart_punctuation() {
+    for compatibility in [false, true] {
+        let temp = compatible_fixture();
+        fs::write(
+            temp.path().join("site.toml"),
+            format!("name = 'Code'\nurl = 'https://example.org/docs/'\ncompatibility = {compatibility}\n"),
+        )
+        .unwrap();
+        fs::write(
+            temp.path().join("content/code.md"),
+            "# Code\n\n\"Prose\" ... is typeset.\n\n| Example |\n| --- |\n| <pre><code>if (a &lt; b) ...<br />\"literal\" -- &amp; &#39;quotes&#39;</code></pre> |\n\nInline <code>\"raw\" ... --</code> and `\"fenced\" ... --`.\n",
+        )
+        .unwrap();
+        site_generator::build(temp.path()).unwrap();
+        let document = kuchiki::parse_html()
+            .one(fs::read_to_string(temp.path().join("dist/code/index.html")).unwrap());
+        assert_eq!(
+            document
+                .select_first("article pre code")
+                .unwrap()
+                .text_contents(),
+            "if (a < b) ...\"literal\" -- & 'quotes'"
+        );
+        assert_eq!(
+            document
+                .select_first("article p code")
+                .unwrap()
+                .text_contents(),
+            "\"raw\" ... --"
+        );
+        assert!(
+            document
+                .select_first("article p")
+                .unwrap()
+                .text_contents()
+                .contains('\u{201c}')
+        );
+    }
+}
+
+#[test]
+fn legacy_raw_slug_collisions_do_not_steal_later_unique_fragments() {
+    let temp = compatible_fixture();
+    fs::write(
+        temp.path().join("content/collisions.md"),
+        "# Collisions\n\nAn imported page.\n\n## Example\n\nFirst.\n\n## Example ( `<` )\n\nSecond.\n\n## Example ( `<>` )\n\nThird.\n",
+    )
+    .unwrap();
+    site_generator::build(temp.path()).unwrap();
+    let document = kuchiki::parse_html()
+        .one(fs::read_to_string(temp.path().join("dist/collisions/index.html")).unwrap());
+    let ids = document
+        .select("article h2")
+        .unwrap()
+        .map(|node| node.attributes.borrow().get("id").unwrap().to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(ids, ["example", "example-duplicate-1", "example-1"]);
+}
+
+#[test]
 fn callouts_render_shared_recipes_and_preserve_nested_code_and_fenced_literals() {
     let temp = compatible_fixture();
     let root = temp.path();
@@ -343,7 +490,7 @@ fn compatibility_preserves_underscores_in_imported_page_routes() {
     let html =
         fs::read_to_string(root.join("dist/analyzer_versions/codesonar_v/index.html")).unwrap();
     assert!(html.contains("href=\"/docs/analyzer_versions/codesonar_v/\""));
-    assert!(html.contains("id=\"version-details\""));
+    assert!(html.contains("id=\"version_details\""));
 }
 
 #[test]
@@ -370,7 +517,6 @@ fn legacy_code_examples_preserve_fences_and_enhance_without_vue() {
     assert!(html.contains("Text after the example."));
     assert!(html.contains("data-sds-action=\"copy-code\""));
     assert!(html.contains("sds-lite/documentation.js"));
-    assert!(!html.contains("_site/site.css"));
 }
 
 #[test]

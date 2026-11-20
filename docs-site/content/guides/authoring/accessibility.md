@@ -14,38 +14,24 @@ Review descriptions, link labels, and explanations with every content change.
 | Link label: "Click here" | "Download the installation checklist (PDF)" |
 | Heading: "More" | "Troubleshoot installation errors" |
 
-Describe images to help the reader complete the task; avoid repeating captions.
-Explain complex charts in nearby prose or a table rather than long alt text.
-Use the
-[explicit decorative marker](assets.md#add-an-image)
-only for purely decorative images.
-
-::code-block
-```markdown
-![The Settings panel with Publish selected](/images/publish-settings.png)
-[Download the installation checklist (PDF)](/downloads/installation.pdf)
-```
-::
-
-These are illustrative asset paths; add the files before using them.
+Explain complex charts in nearby prose or a table, not long alt text.
+Use the [decorative marker](assets.md#add-an-image) only for decorative images.
 
 ## Make the reading order clear
 
-- Use one main heading and consecutive heading levels, not bold text as headings.
+- Use [heading levels](markdown.md#a-complete-page), not bold text as headings.
 - Write descriptive headings that make sense in a table of contents.
 - Use numbered lists for ordered tasks and bullets for unordered choices.
 - Introduce code examples with their purpose and explain important results.
 - Label warnings and noncompliant examples; do not rely on position, color, or icons.
 
-For example, replace "Choose the green option on the right" with
-"Choose **Publish**." Use ordinary text for essential instructions, not text
-embedded only in a screenshot.
+Write "Choose **Publish**," not "Choose the green option on the right."
+Do not put essential instructions only in screenshots.
 
 ## Keep tables simple
 
-Use a header row and explain what to compare. Prefer lists for instructions or
-unrelated facts. Avoid merged cells and complex headers; data beyond Markdown
-tables may need semantic HTML and manual accessibility review.
+Use a header row; avoid merged cells and complex headers. Prefer lists for
+instructions or unrelated facts.
 
 ## Review with a keyboard and assistive technology
 
@@ -57,5 +43,5 @@ tables may need semantic HTML and manual accessibility review.
 5. Use a screen reader's heading and link lists to check labels and descriptions
    without visual context.
 
-Combine automated checks with manual review. Assess WCAG conformance on the
-complete deployed site, including content and host-added authentication or UI.
+Combine automated checks with manual review of the complete deployed site,
+including host-added authentication or UI.

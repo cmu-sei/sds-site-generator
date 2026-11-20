@@ -34,8 +34,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: stable
-      - run: npm run build
-      - run: npm test
+      - run: npm run build:generator
+      - run: npm run test:package
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b

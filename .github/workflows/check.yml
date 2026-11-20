@@ -29,7 +29,7 @@ jobs:
           cache: npm
       - run: npm install --global npm@12.2.1
       - run: npm ci --ignore-scripts
-      - run: npm test
+      - run: npm run test:package
       - id: matrix
         run: echo "matrix=$(node scripts/package.mjs matrix)" >> "$GITHUB_OUTPUT"
 
@@ -73,9 +73,25 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --locked --target "$RUST_TARGET" -- -D warnings
       - run: cargo test --all-targets --locked --target "$RUST_TARGET"
+      - name: Build the generator and documentation with npm
+        run: npm run build
+      - name: Verify Rust discovery without PATH configuration
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process'
+          import { existsSync } from 'node:fs'
+          import { delimiter, join } from 'node:path'
+          const env = { ...process.env }
+          const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path')
+          const extension = process.platform === 'win32' ? '.exe' : ''
+          env[pathKey] = env[pathKey].split(delimiter).filter(directory =>
+            !['cargo', 'rustc'].some(name => existsSync(join(directory, `${name}${extension}`)))
+          ).join(delimiter)
+          execFileSync(process.execPath, ['scripts/package.mjs', 'build'], { env, stdio: 'inherit' })
+          NODE
       - run: cargo build --release --locked --target "$RUST_TARGET"
       - run: node scripts/package.mjs stage "target/$RUST_TARGET/release/$EXECUTABLE"
-      - run: npm test
+      - run: npm run test:package
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-${{ matrix.name }}
@@ -105,8 +121,8 @@ jobs:
           merge-multiple: true
       - name: Restore executable modes after artifact download
         run: node scripts/package.mjs permissions
-      - run: npm run check:package
-      - run: npm test
+      - run: npm run check:release
+      - run: npm run test:package
       - run: npm pack
       - run: node scripts/package.mjs archives
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -135,12 +151,12 @@ jobs:
           cache-dependency-path: tools/package-lock.json
       - run: npm install --global npm@12.2.1
       - run: cargo build --locked
-      - run: target/debug/sds-site-generator build example
+      - run: target/debug/sds-site-generator build docs-site
       - run: npm ci --ignore-scripts
         working-directory: tools
       - run: npx playwright install --with-deps chromium
         working-directory: tools
-      - run: npm test
+      - run: npm run test:search
         working-directory: tools
       - run: npm run test:highlight
         working-directory: tools
@@ -161,7 +177,7 @@ jobs:
           CHROME_PATH="$(node --input-type=module -e 'import { chromium } from "playwright"; console.log(chromium.executablePath())')"
           export CHROME_PATH
           npm run test:search-ui
-          npm run audit
+          npm run audit:site
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

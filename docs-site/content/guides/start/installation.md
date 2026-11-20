@@ -3,14 +3,12 @@ order: 1
 ---
 # Installation
 
-Install the standalone executable on the computer where you write and build
-documentation. It needs no Node.js, npm, Rust, account, or search service.
+The standalone executable needs no Node.js, npm, Rust, or account.
 
 ## Choose your download
 
-From [GitHub Releases](https://github.com/cmu-sei/sds-site-generator/releases),
-download `SHA256SUMS` and the archive for your build computer's operating
-system and processor.
+Download `SHA256SUMS` and your platform's archive from
+[GitHub Releases](https://github.com/cmu-sei/sds-site-generator/releases).
 
 | Operating system | Processor | Archive name |
 | --- | --- | --- |
@@ -25,8 +23,7 @@ system and processor.
 `uname -m` commonly reports `arm64`/`aarch64` for ARM64 or `x86_64` for x64.
 On Windows, check **Settings > System > About > System type**.
 
-Before extracting, replace `ARCHIVE` below with the downloaded filename and
-calculate its SHA-256 checksum:
+Before extracting, verify the checksum; replace `ARCHIVE` with your filename:
 
 - macOS: `shasum -a 256 ARCHIVE`
 - Linux: `sha256sum ARCHIVE`
@@ -46,7 +43,7 @@ chmod u+x ./sds-site-generator
 ```
 ::
 
-To install for your user account without administrator privileges:
+Install for your user account:
 
 ::code-block
 ```sh
@@ -57,17 +54,14 @@ sds-site-generator --version
 ```
 ::
 
-Keep the PATH setting by adding `export PATH="$HOME/.local/bin:$PATH"` to your
-shell's startup file: for example, `.zprofile` for login zsh or `.bashrc` for
-interactive bash. Open a new terminal and run `sds-site-generator --version`.
-
-Follow your organization's download-approval process; do not disable OS
-security controls. To avoid changing PATH, use the executable's full path.
+Add the same `export PATH` line to your shell's startup file, such as
+`.zprofile` for login zsh or `.bashrc` for interactive bash. Open a new terminal
+and run `sds-site-generator --version`, or use the executable's full path.
 
 ## Windows PowerShell
 
-Use **Extract All** to unpack the ZIP into a user-owned folder such as
-`$HOME\Tools\sds-site-generator`. With the executable directly inside it, run:
+Use **Extract All** to unpack the ZIP into `$HOME\Tools\sds-site-generator`,
+then run:
 
 ::code-block
 ```powershell
@@ -76,18 +70,16 @@ cd "$HOME\Tools\sds-site-generator"
 ```
 ::
 
-To run it from any directory, search Windows Settings for
-**Edit environment variables for your account**. Edit your user **Path**,
-add the executable's containing folder, and open a new PowerShell window.
-Confirm `sds-site-generator --version`.
+To run it anywhere, open **Edit environment variables for your account** in
+Windows Settings. Add the executable's folder to your user **Path**, open a new
+PowerShell window, and run `sds-site-generator --version`.
 
 You can instead use a full path with PowerShell's call operator:
 `& "$HOME\Tools\sds-site-generator\sds-site-generator.exe" --version`.
-Follow your organization's download approval policy if Windows blocks it.
 
 ## Verify and create a site
 
-With the executable on PATH, verify it in your shell:
+Verify installation:
 
 ::code-block
 ```sh
@@ -96,18 +88,15 @@ sds-site-generator --help
 ```
 ::
 
-Continue to [Create your first site](getting-started.md).
-Multiline `sh` examples elsewhere in this guide use POSIX backslash
-continuations; in PowerShell, put each command on one line.
+Continue to [Create your first site](getting-started.md). In PowerShell, put
+multiline `sh` examples on one line instead of using backslash continuations.
 
 ## Optional npm installation
 
-To manage the generator with npm, install Node.js 22.19+ and authenticate to
-GitHub Packages, which requires authentication even for public packages.
-
-Follow [GitHub's npm registry authentication instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-to-github-packages)
-using a personal access token (classic) with `read:packages` and access to
-the package. Keep tokens out of committed files.
+Install Node.js 22.19+ and
+[authenticate to GitHub Packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-to-github-packages),
+even for public packages. Use a personal access token (classic) with
+`read:packages` and package access; never commit it.
 
 ::code-block
 ```sh
@@ -118,8 +107,7 @@ sds-site-generator --version
 ```
 ::
 
-The package includes the executable; no compilation or postinstall download
-is needed. For a shared project, run these commands in the site directory:
+The package bundles the executable. For a shared project, run in the site directory:
 
 ::code-block
 ```sh
@@ -130,15 +118,14 @@ npm pkg set "scripts.dev=sds-site-generator preview ." "scripts.check=sds-site-g
 ```
 ::
 
-Replace `0.1.0` with your chosen version. Commit the manifest and lockfile;
-ignore `node_modules/` and `dist/`. Contributors authenticate, run
-`npm ci --ignore-scripts`, then use `npm run dev`, `npm run check`, and
-`npm run build`.
+Replace `0.1.0` with your version. Contributors authenticate and run
+`npm ci --ignore-scripts`, then `npm run dev`, `npm run check`, or `npm run build`.
+See [Team workflows](../publishing/team-workflows.md#what-belongs-in-the-repository)
+for files to commit and ignore.
 
 ## Build from source
 
-With stable Rust installed, run this from a checkout of the
-[source repository](https://github.com/cmu-sei/sds-site-generator):
+With stable Rust installed, run this from a local source checkout:
 
 ::code-block
 ```sh

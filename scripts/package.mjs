@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { delimiter, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import semver from 'semver'
 import { parse, stringify } from 'smol-toml'
@@ -36,6 +36,53 @@ export function run(command, args, options = {}) {
   return execFileSync(command, args, { cwd: root, stdio: 'inherit', ...options })
 }
 
+export function runCargo(args, options = {}) {
+  try {
+    return run('cargo', args, options)
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
+  const env = options.env || process.env
+  const extension = process.platform === 'win32' ? '.exe' : ''
+  let bin = join(env.CARGO_HOME || join(homedir(), '.cargo'), 'bin')
+  let standalone = false
+  if (!existsSync(join(bin, `cargo${extension}`))) {
+    const rustupHome = env.RUSTUP_HOME || join(homedir(), '.rustup')
+    const toolchains = join(rustupHome, 'toolchains')
+    const settings = join(rustupHome, 'settings.toml')
+    const selected = env.RUSTUP_TOOLCHAIN || (existsSync(settings) ? parse(readFileSync(settings, 'utf8')).default_toolchain : undefined)
+    if (selected !== undefined && (typeof selected !== 'string' || !selected)) throw new Error('Invalid default Rust toolchain in rustup settings.toml.')
+    const directory = selected && (isAbsolute(selected) ? selected : join(toolchains, selected))
+    const channel = selected || 'stable'
+    let candidates = []
+    if (directory && existsSync(directory)) candidates = [join(directory, 'bin')]
+    else if (!isAbsolute(channel) && existsSync(toolchains)) {
+      candidates = readdirSync(toolchains)
+        .filter(name => name === channel || name.startsWith(`${channel}-`))
+        .map(name => join(toolchains, name, 'bin'))
+    }
+    const installed = candidates.filter(bin => ['cargo', 'rustc'].every(name => existsSync(join(bin, `${name}${extension}`))))
+    if (installed.length > 1) throw new Error(`Multiple ${channel} Rust toolchains found. Select one with RUSTUP_TOOLCHAIN or add rustup to PATH.`)
+    if (!installed.length) throw new Error(selected
+      ? `Rust toolchain "${selected}" is not installed. Install it with rustup toolchain install ${selected}, then run npm run build:generator again.`
+      : 'Rust is required to build from source. Install it from https://rustup.rs, then run npm run build:generator again.')
+    bin = installed[0]
+    standalone = true
+  }
+  const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path') || 'PATH'
+  const childEnv = { ...env, [pathKey]: [bin, env[pathKey]].filter(Boolean).join(delimiter) }
+  if (standalone) {
+    const library = join(bin, '..', 'lib')
+    if (process.platform === 'win32') childEnv[pathKey] = [bin, library, env[pathKey]].filter(Boolean).join(delimiter)
+    else {
+      const libraryKey = process.platform === 'darwin' ? 'DYLD_FALLBACK_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
+      const defaults = process.platform === 'darwin' ? [join(homedir(), 'lib'), '/usr/local/lib', '/usr/lib'].join(delimiter) : ''
+      childEnv[libraryKey] = [library, childEnv[libraryKey] ?? defaults].filter(Boolean).join(delimiter)
+    }
+  }
+  return run(join(bin, `cargo${extension}`), args, { ...options, env: childEnv })
+}
+
 function verifyHostBinary(binary) {
   const expected = `sds-site-generator ${metadata().version}`
   const actual = run(binary, ['--version'], { encoding: 'utf8', stdio: 'pipe' }).trim()
@@ -63,8 +110,16 @@ function stage(binary) {
   verifyHostBinary(binary)
   const destination = executablePath(root)
   mkdirSync(join(destination, '..'), { recursive: true })
-  copyFileSync(binary, destination)
-  chmodSync(destination, 0o755)
+  const temporary = mkdtempSync(join(destination, '..', '.stage-'))
+  try {
+    const staged = join(temporary, selectPlatform().executable)
+    copyFileSync(binary, staged)
+    chmodSync(staged, 0o755)
+    renameSync(staged, destination)
+    verifyHostBinary(destination)
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
 }
 
 export function buildPages(baseUrl, directory = root) {
@@ -125,21 +180,23 @@ function archives() {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const [command, argument] = process.argv.slice(2)
+    const [command, ...args] = process.argv.slice(2)
+    const [argument] = args
     metadata()
     if (command === 'matrix') console.log(JSON.stringify({ include: platforms.map(selected => ({ ...selected, name: `${selected.platform}-${selected.arch}` })) }))
     else if (command === 'version') console.log(metadata().version)
     else if (command === 'release') console.log(JSON.stringify(releaseIdentity(argument, process.env.GITHUB_REPOSITORY_OWNER || '')))
     else if (command === 'build') {
-      run('cargo', ['build', '--release', '--locked'])
+      runCargo(['build', '--release', '--locked'])
       stage(join(root, 'target/release', selectPlatform().executable))
-    } else if (command === 'stage' && argument) stage(resolve(argument))
+    } else if (command === 'test') runCargo(['test', '--all-targets', '--locked', ...args])
+    else if (command === 'stage' && argument) stage(resolve(argument))
     else if (command === 'permissions') {
       for (const selected of platforms) chmodSync(executablePath(root, selected), 0o755)
     } else if (command === 'verify') verifyBundle()
     else if (command === 'archives') archives()
     else if (command === 'pages' && argument) buildPages(argument)
-    else throw new Error('Usage: package.mjs build | stage <binary> | permissions | verify | matrix | version | release <tag> | archives | pages <url>')
+    else throw new Error('Usage: package.mjs build | test [cargo test arguments] | stage <binary> | permissions | verify | matrix | version | release <tag> | archives | pages <url>')
   } catch (error) {
     console.error(error.message)
     process.exitCode = 1

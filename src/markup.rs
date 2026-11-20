@@ -480,6 +480,49 @@ pub(crate) fn markdown(input: &str, compatibility: bool) -> Result<(NodeRef, Vec
                 | Options::ENABLE_SMART_PUNCTUATION,
         ),
     );
+    let lower = prepared.to_ascii_lowercase();
+    if lower.contains("<code") || lower.contains("<pre") {
+        // Inline HTML code in Markdown tables is otherwise subject to smart punctuation.
+        let mut literal = String::new();
+        html::push_html(
+            &mut literal,
+            Parser::new_ext(
+                &prepared,
+                Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+            ),
+        );
+        let rendered = parse(&output);
+        let literal = parse(&literal);
+        let code_nodes = |document: &NodeRef| -> Result<Vec<NodeRef>> {
+            Ok(document
+                .select("pre,code")
+                .map_err(|()| anyhow::anyhow!("Invalid code selector."))?
+                .filter(|node| {
+                    !node.as_node().ancestors().any(|ancestor| {
+                        ancestor.as_element().is_some_and(|element| {
+                            matches!(element.name.local.as_ref(), "pre" | "code")
+                        })
+                    })
+                })
+                .map(|node| node.as_node().clone())
+                .collect())
+        };
+        let targets = code_nodes(&rendered)?;
+        let sources = code_nodes(&literal)?;
+        ensure!(
+            targets.len() == sources.len(),
+            "Smart punctuation changed the structure of literal code."
+        );
+        for (target, source) in targets.into_iter().zip(sources) {
+            for child in target.children().collect::<Vec<_>>() {
+                child.detach();
+            }
+            for child in source.children().collect::<Vec<_>>() {
+                target.append(child);
+            }
+        }
+        output = body_html(&rendered)?;
+    }
     for (index, (quality, title)) in code_blocks.iter().enumerate() {
         output = output.replace(
             &format!("<!--site-code-start:{index}-->"),
@@ -501,7 +544,7 @@ pub(crate) fn markdown(input: &str, compatibility: bool) -> Result<(NodeRef, Vec
     changes.extend(removed);
     let document = parse(&clean);
     if let Ok(nodes) = document.select("site-code-block") {
-        for node in nodes {
+        for (index, node) in nodes.enumerate() {
             let quality = node
                 .attributes
                 .borrow()
@@ -564,7 +607,8 @@ pub(crate) fn markdown(input: &str, compatibility: bool) -> Result<(NodeRef, Vec
                 String::new()
             };
             let header = parse(&format!(
-                "<header>{title}{quality}<nav aria-label=\"Code actions\">{complete}<button class=\"sds-button\" type=\"button\" data-sds-shape=\"icon\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-action=\"copy-code\" aria-label=\"Copy to clipboard\" title=\"Copy to clipboard\" hidden>{}</button><button class=\"sds-button\" type=\"button\" data-sds-shape=\"icon\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-action=\"toggle-code-fullscreen\" aria-label=\"Toggle fullscreen\" title=\"Enter fullscreen\" aria-pressed=\"false\" hidden>{}{}</button></nav></header>",
+                "<header>{title}{quality}<nav aria-label=\"Code actions for example {}\">{complete}<button class=\"sds-button\" type=\"button\" data-sds-shape=\"icon\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-action=\"copy-code\" aria-label=\"Copy to clipboard\" title=\"Copy to clipboard\" hidden>{}</button><button class=\"sds-button\" type=\"button\" data-sds-shape=\"icon\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-action=\"toggle-code-fullscreen\" aria-label=\"Toggle fullscreen\" title=\"Enter fullscreen\" aria-pressed=\"false\" hidden>{}{}</button></nav></header>",
+                index + 1,
                 code_icon("copy"),
                 code_icon("maximize-2"),
                 code_icon("minimize-2")

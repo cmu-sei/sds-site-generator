@@ -28,16 +28,11 @@ Put opening and closing delimiters on separate lines.
 | `variant` (appearance) | `outline`, `bold`; omit for a subtle surface | Subtle surface |
 | `size` | `xs`, `sm`, `md`, `lg` | `md` |
 
-Properties map to SDS Lite's `data-sds-tone`, `data-sds-variant`, and
-`data-sds-size`. A bare `::callout` uses the defaults above.
+A bare `::callout` uses the defaults above. Callouts support nested Markdown,
+lists, and fenced code.
 
-Use nested Markdown, lists, and fenced code. Include a label such as
-**Warning:** so meaning does not depend on color.
-
-Legacy `type` and color variants such as `orange` require
-[compatibility mode](../maintenance/importing.md#legacy-callouts) and produce
-migration warnings. Never mix them with `tone`; unknown properties and invalid
-values fail in either mode.
+For imported callouts, see
+[the legacy callout migration guide](../start/configuration.md#legacy-callouts).
 
 ## Code examples
 
@@ -64,31 +59,17 @@ return 0;
 | `quality="bad"` | Noncompliant code, red treatment and badge |
 | `quality="average"` | Neutral example; the default |
 
-Quality labels are yours, not automated analysis. Use neutral for ordinary
-examples; reserve `good` and `bad` for compliance examples.
+Choose quality labels yourself; use `average` for ordinary examples.
 
-JavaScript adds copy and fullscreen controls. Escape exits fullscreen and
-restores focus; clipboard failures are displayed. Code stays readable without
-JavaScript.
+JavaScript adds copy and fullscreen controls. Escape exits fullscreen;
+code remains readable without JavaScript. Plain fences scroll and are
+keyboard-focusable but have no copy or fullscreen controls.
 
 ### Syntax highlighting
 
-Put a lowercase language label after the fence's opening backticks,
-not on `::code-block`:
-
-::code-block
-````markdown
-::code-block{title="Site settings"}
-```toml
-name = "My documentation"
-url = "https://example.org/docs/"
-```
-::
-````
-::
-
-Highlighting uses bundled Shiki grammars and high-contrast light/dark themes.
-It needs JavaScript, not internet access, and works with wrapped or plain fences.
+Put a lowercase language label after the fence's opening backticks, as in the
+`c` example above, not on `::code-block`. Highlighting works with wrapped or
+plain fences and needs JavaScript, but no internet access.
 
 | Language | Accepted fence labels |
 | --- | --- |
@@ -110,15 +91,13 @@ It needs JavaScript, not internet access, and works with wrapped or plain fences
 | JSON | `json` |
 | YAML | `yaml`, `yml` |
 | Diff | `diff` |
+| CSS | `css` |
+| GLSL | `glsl` |
+| SQL | `sql` |
+| Regular expressions | `regexp`, `regex` |
+| C++ macros | `cpp-macro` |
 
-Dependency grammars also make CSS (`css`), GLSL (`glsl`), SQL (`sql`), regular
-expressions (`regexp`, `regex`), and C++ macros (`cpp-macro`) available.
-Fortran support is free-form, not a separate fixed-form grammar.
-
-Use `text` or omit the label for plain text. Unknown labels stay unhighlighted;
-languages are not auto-detected or downloaded. Without JavaScript, code stays
-readable and unhighlighted. Adding a grammar requires rebuilding the bundled
-highlighting assets.
+Use `text` or omit the label for plain text. Unknown labels stay unhighlighted.
 
 ### Short and complete code
 
@@ -163,5 +142,3 @@ line, without a space after `#`.
 - Close each wrapper with `::`, including nested wrappers.
 - Only the listed properties and values are allowed.
 - Vue bindings, executable attributes, and other MDC widgets are not supported.
-- An unclosed wrapper or unsupported widget produces a diagnostic; fix it
-  rather than enabling compatibility mode for new content.

@@ -3,23 +3,25 @@ order: 3
 ---
 # Search and hosting
 
-Search indexes published page content and runs in the reader's browser.
-Deploy HTML, scripts, and search data from the same build.
+Search indexes published page sections and runs locally in the reader's browser
+without telemetry. It requires JavaScript and HTTP(S).
 
 ## Write for discoverability
 
-Use descriptive titles and headings; matches in them rank higher. Include the
-reader's vocabulary in section text, not only images or linked PDFs.
+Use descriptive titles and headings, which rank higher, and include the
+reader's vocabulary in the text.
 
-Pages are indexed by section. To make an attachment discoverable, add a Markdown
-summary and download link. Attachments are not indexed separately; custom YAML
-metadata such as `tags` does not add filters.
+Attachments are not indexed; add a Markdown summary and download link.
+Custom metadata such as `tags` does not add search filters.
 
-Drafts are excluded. Pages hidden with `navigation: false` remain searchable.
-There is no supported per-page search-exclusion setting or configurable
-ranking/keyword field.
+Search follows the [page publication settings](../authoring/markdown.md#front-matter).
+Per-page exclusion and custom ranking/keyword fields are unsupported.
 
 ## Query behavior
+
+Press Cmd+K (macOS) or Ctrl+K to open search and focus its input, including
+while typing. Pressing the shortcut again refocuses the input without clearing
+the query. Arrow keys select results, Enter opens one, and Escape closes the dialog.
 
 | Query | Meaning |
 | --- | --- |
@@ -27,9 +29,9 @@ ranking/keyword field.
 | `"site configuration"` | The words together in that order |
 | `config` | Prefix completion on the final unquoted term |
 
-Results link to sections. Queries allow up to 200 characters and show up to
-30 results; add words to narrow them. Wildcards, Boolean operators, fuzzy
-matching, and language-stemming query syntax are unsupported.
+Queries allow 200 characters and show up to 30 section results; add words to
+narrow them. Wildcards, Boolean operators, fuzzy matching, and stemming
+syntax are unsupported.
 
 The standalone search page supports shareable query URLs:
 
@@ -39,38 +41,29 @@ https://example.org/docs/search/?q=site%20configuration
 ```
 ::
 
-Use your deployment URL. Queries stay local to the browser, but shareable URLs
-can appear in hosting logs and browser history.
+Use your deployment URL. Shared query URLs can appear in hosting logs and
+browser history.
 
 ## Deploy a complete build
 
-- Publish HTML, `_site/` assets, search data, and public files together, not just changed HTML.
-- Use a host's atomic deployment feature when available.
-- Ensure files removed from the new output are removed from the deployment.
-- Keep the previous complete deployment if your host supports rollback.
-
-Configure remote synchronization and caching through your host. Avoid immutable
-caching for URLs reused across builds. To troubleshoot, invalidate stale
-HTML/search assets or use a clean browser session.
+Follow the [upload instructions](deployment.md#what-to-upload) to keep pages and
+search data consistent. Avoid immutable caching for URLs reused across builds.
+Clear stale HTML/search assets or try a clean browser session when troubleshooting.
 
 ## Diagnose search failures
 
 1. Open the site over HTTP(S), not `file://`.
-2. Confirm JavaScript is enabled and the browser meets the supported modern
-   browser requirements.
+2. Enable JavaScript and use a [supported browser](deployment.md#before-sharing-the-url).
 3. Check that the configured URL prefix matches the deployed location.
 4. In browser developer tools, look for failed script, worker, or JSON requests.
-5. Confirm the host serves JavaScript and JSON with appropriate content types,
-   not an HTML error page with a successful status.
-6. If the host imposes a Content Security Policy, ensure it permits the site's
-   local scripts, module worker, and same-origin search-data requests.
+5. Check JavaScript/JSON responses have the right content types, not HTML error pages.
+6. Ensure any Content Security Policy permits local scripts, the module worker,
+   and same-origin search-data requests.
 
 Search errors are displayed in the interface.
 
 ## Offline and restricted networks
 
-Build on a disconnected machine with the standalone executable; generation
-needs no external assets or search service. For air-gapped networks, transfer
-the complete output to an approved internal HTTP(S) server so search can load
-its scripts and data. External links need access to their destinations.
-The site uses ordinary browser caching, without a service worker.
+The standalone executable builds offline. Transfer the complete output to an
+internal HTTP(S) server for disconnected networks; external links still need
+network access. There is no service worker.

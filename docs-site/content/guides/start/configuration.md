@@ -3,8 +3,7 @@ order: 3
 ---
 # Site configuration
 
-Configure your site in `site.toml`, beside `content/` and `public/`.
-Use TOML; unknown top-level settings fail validation.
+Edit `site.toml` beside `content/` and `public/`. Unknown settings fail validation.
 
 ## All site settings
 
@@ -25,12 +24,11 @@ repository = "https://github.com/example/my-docs"
 | `url` | Yes | Absolute HTTP(S) publishing URL, including any deployment subdirectory |
 | `language` | No; `en` | HTML language tag, such as `en-US` |
 | `description` | No; empty | Description for the generated search page, not a default for content pages |
-| `compatibility` | No; `false` | Turn selected import problems into warnings and preserve underscores in routes |
+| `compatibility` | No; `false` | Enable legacy import behavior; see [Compatibility mode](#compatibility-mode) |
 | `repository` | No | Absolute HTTP(S) URL for the masthead source link |
 | `navigation` | No; automatic | Ordered custom main-menu entries; see below |
 
-Set site-level values **before** `[[navigation]]`; values after a TOML table
-declaration belong to that table.
+Put site-level settings **before** `[[navigation]]`; later values belong to that table.
 
 ## Choose the publishing URL
 
@@ -41,44 +39,128 @@ url = "https://your-org.github.io/my-docs/"
 ```
 ::
 
-Use your final public URL, not localhost. For a domain-root site, use
-`https://docs.example.org/`. The URL controls canonical links, sitemaps, asset
-paths, and preview's mount point. A trailing slash is added if missing.
+Use the final public URL, not localhost; for a domain-root site, use
+`https://docs.example.org/`. It controls canonical links, sitemaps, asset paths,
+and preview's mount point. A trailing slash is added automatically.
 
 URLs cannot contain credentials, query strings, or fragments. Deployment
 subdirectory segments may contain only ASCII letters, numbers, hyphens, and
 underscores. Use HTTPS for production.
 
-`repository` also rejects credentials. `language` must consist of nonempty
-alphanumeric segments separated by hyphens; choose a meaningful language tag.
+`repository` also rejects credentials.
+
+## Compatibility mode
+
+Compatibility mode helps migrate Markdown and assets from sites built with the
+[SDS Documentation Site template](https://github.com/cmu-sei/sds-docs-template),
+which uses the `@cmu-sei/sds-documentation-site` Nuxt Layer. It preserves legacy
+link conventions and reports selected import problems as warnings.
+
+**Leave it off for new sites.** To enable it site-wide, set this top-level value:
+
+::code-block
+```toml
+compatibility = true
+```
+::
+
+### What changes
+
+| Area | With `compatibility = true` |
+| --- | --- |
+| Page routes | Preserve underscores instead of converting them to hyphens |
+| Generated heading fragments | Use Nuxt-style slugging and duplicate numbering, preserving underscores and prefixing numeric IDs with `_`; collisions get unique IDs without taking another legacy destination |
+| Relative download links | Try the public root only when no page-relative file or page matches |
+| Legacy callouts | Accept old color-based properties and report migration warnings; see [Legacy callouts](#legacy-callouts) |
+| Selected validation failures | Continue with warnings for missing links or fragments, missing image descriptions, remote or oversized images, heading repairs, missing descriptions, unsupported markup or files, and sanitization changes |
+
+Warnings may leave broken links or omit unsupported files. Use current authoring
+syntax and root-relative download URLs for new content.
+
+### What it does not do
+
+It does not run Nuxt/Vue widgets, bindings, plugins, or scripts, or add custom
+themes. YAML metadata, semantic HTML, anchors, attachments, and documented
+wrappers already work in normal mode.
+
+Invalid metadata, configuration, or menu targets; duplicate page URLs; unsafe
+public filenames; output collisions; and invalid callout properties still fail.
+Unsafe markup is always sanitized.
+
+### Review diagnostics
+
+The terminal shows up to 20 warnings. Builds write every file, line, and message
+to `dist/_site/diagnostics.json`:
+
+::code-block
+```sh
+sds-site-generator build .
+sds-site-generator check . --strict
+```
+::
+
+`--strict` fails on remaining warnings. Fix the source issues and review the
+site before publishing; see [Import an existing site](../maintenance/importing.md#import-an-existing-site).
+
+### Legacy callouts
+
+Compatibility mode renders this legacy syntax with a migration warning:
+
+::code-block
+```markdown
+::callout{variant="orange" type="outline" size="sm"}
+**Warning:** Check local links.
+::
+```
+::
+
+Convert it to the [current callout syntax](../authoring/components.md#callouts):
+
+::code-block
+```markdown
+::callout{tone="warning" variant="outline" size="sm"}
+**Warning:** Check local links.
+::
+```
+::
+
+Map old color variants to tones: `blue`/`indigo` to `info`, `green`/`teal` to
+`success`, `orange` to `warning`, `red` to `danger`, `gray` to `neutral`, and
+`purple` to `accent`. Rename `type` to `variant`, omitting it when the old
+type was `subtle`. Keep `size` unchanged.
+
+Convert all legacy callouts to pass strict validation. Never mix `tone` with
+legacy properties; a bare `::callout` is neutral in either mode.
+
+### Disable it deliberately
+
+After repairing the import, set `compatibility = false` and rerun strict
+validation. This can change underscore routes and generated heading fragments
+even when validation passes. Keep it enabled if those public URLs must remain,
+or plan a [URL migration](../maintenance/url-migrations.md) before disabling it.
 
 ## Language and translations
 
-`language` sets the HTML language for browsers and assistive technology.
-Interface labels and search messages are in English.
-
-Maintain each translation as a separate site with its own `language` and
-publishing URL. Link between editions.
+`language` sets the HTML language. Use nonempty alphanumeric segments separated
+by hyphens, such as `en-US`. Interface labels remain English.
+For translations, build separate sites with their own language and URL, then
+link between editions.
 
 ## Metadata and discoverability
 
-Metadata comes from these settings and page content:
+Generated metadata uses site settings and page content:
 
 | Output | Source |
 | --- | --- |
 | Browser tab title and social title | Page `title`, followed by the site `name` |
-| Page description and social description | Page `description`, or the introductory paragraph fallback |
+| Page description and social description | [Page description](../authoring/markdown.md#front-matter) |
 | Canonical URL and social URL | Site `url` plus the generated page route |
 | Sitemap destinations | Published page routes under the configured site `url` |
 | HTML language | Site `language` |
 
-Give pages specific titles and concise descriptions. The site-level
-`description` applies only to the search page.
-
 The output includes Open Graph, a Twitter summary-card declaration, and
 WebPage structured data. Custom social images, arbitrary head tags, per-page
-canonical overrides, and `noindex` are unsupported. Search and social platforms
-control preview display and caching.
+canonical overrides, and per-page `noindex` settings are unsupported.
 
 ## Main navigation
 
@@ -98,10 +180,6 @@ path = "/guides/"
 title = "Publishing"
 path = "/guides/publishing/"
 
-[[navigation.children]]
-title = "Requirements"
-path = "/guides/start/getting-started/#get-the-generator"
-
 [[navigation]]
 title = "Community"
 
@@ -111,18 +189,16 @@ path = "https://github.com/example/my-docs"
 ```
 ::
 
-Create the example destinations in your site before using this menu.
-Each item needs a nonempty `title` and either a `path` or nonempty `children`.
-Paths must be site-root paths or absolute HTTP(S) URLs without credentials;
-relative, `mailto:`, and protocol-relative menu links are unsupported.
+Use destinations that exist in your site. Each entry needs a nonempty `title`
+and either a `path` or nonempty `children`. Paths must be site-root paths
+or absolute HTTP(S) URLs without credentials.
 
-Children create header dropdowns and expandable mobile groups. A group's
-optional `path` adds a landing-page link. Nest further with
-`[[navigation.children.children]]`. Items follow configuration order.
+Entries follow configuration order. Children create dropdowns and mobile
+groups; add a group `path` for a landing-page link. Nest further with
+`[[navigation.children.children]]`.
 
-Omit the deployment prefix; it is added automatically. Local pages and
-fragments are validated, even in compatibility mode. This menu does not
-reorder or replace the sidebar tree.
+Omit the deployment prefix; it is added automatically. Local pages and fragments
+are validated. This menu does not change the sidebar tree.
 
 To hide the menu, remove all `[[navigation]]` tables and add this top-level setting:
 

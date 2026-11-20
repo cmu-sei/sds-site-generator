@@ -98,6 +98,27 @@ fn slug(value: &str) -> String {
     tokens(value).join("-")
 }
 
+fn legacy_heading_slug(value: &str) -> String {
+    value
+        .to_lowercase()
+        .chars()
+        .filter(|character| character.is_alphanumeric() || matches!(character, ' ' | '-' | '_'))
+        .map(|character| if character == ' ' { '-' } else { character })
+        .collect()
+}
+
+fn legacy_heading_id(value: &str) -> String {
+    let mut id = value
+        .split('-')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+    if id.starts_with(|character: char| character.is_ascii_digit()) {
+        id.insert(0, '_');
+    }
+    id
+}
+
 fn without_order(value: &str) -> &str {
     value
         .split_once('.')
@@ -375,10 +396,32 @@ impl Page {
             .map_err(|()| anyhow::anyhow!("Invalid heading selector."))?
             .map(|node| node.as_node().clone())
             .collect::<Vec<_>>();
+        let mut legacy_slugs = BTreeSet::new();
+        let legacy_ids = heading_nodes
+            .iter()
+            .map(|node| {
+                if !config.compatibility
+                    || node
+                        .as_element()
+                        .is_some_and(|element| element.attributes.borrow().contains("id"))
+                {
+                    return None;
+                }
+                let base = legacy_heading_slug(&node.text_contents());
+                let mut raw = base.clone();
+                let mut suffix = 1;
+                while !legacy_slugs.insert(raw.clone()) {
+                    raw = format!("{base}-{suffix}");
+                    suffix += 1;
+                }
+                Some(legacy_heading_id(&raw))
+            })
+            .collect::<Vec<_>>();
+        let legacy_reserved = legacy_ids.iter().flatten().collect::<BTreeSet<_>>();
         let mut headings = Vec::new();
         let mut previous = 1;
         let mut seen_h1 = false;
-        for mut node in heading_nodes {
+        for (mut node, legacy_id) in heading_nodes.into_iter().zip(&legacy_ids) {
             let element = node.as_element().context("Heading is not an element.")?;
             let original_level = element.name.local.as_ref()[1..].parse::<usize>()?;
             let mut level = original_level;
@@ -432,6 +475,7 @@ impl Page {
                 .borrow()
                 .get("id")
                 .map(str::to_string)
+                .or_else(|| legacy_id.clone())
                 .unwrap_or_else(|| slug(&text));
             if id.is_empty() {
                 id = "section".into();
@@ -447,10 +491,18 @@ impl Page {
                 id = format!("content-{id}");
             }
             let base = id.clone();
-            let mut suffix = 2;
+            let mut suffix = if config.compatibility { 1 } else { 2 };
             while !anchors.insert(id.clone()) {
-                id = format!("{base}-{suffix}");
+                id = if config.compatibility {
+                    format!("{base}-duplicate-{suffix}")
+                } else {
+                    format!("{base}-{suffix}")
+                };
                 suffix += 1;
+                while config.compatibility && legacy_reserved.contains(&id) {
+                    id = format!("{base}-duplicate-{suffix}");
+                    suffix += 1;
+                }
             }
             let mut attributes = element.attributes.borrow_mut();
             attributes.insert("id", id.clone());
@@ -899,6 +951,16 @@ impl Site {
             self.routes.get(&clean).map(|&index| &self.pages[index])
         };
         let Some(target) = target else {
+            if self.config.compatibility && !input.starts_with('/') {
+                let fallback = dummy.join(&input)?;
+                let fallback_path = percent_decode_str(fallback.path()).decode_utf8()?;
+                if self
+                    .assets
+                    .contains_key(Path::new(fallback_path.trim_start_matches('/')))
+                {
+                    return Ok(format!("{}{suffix}", self.config.href(fallback.path())));
+                }
+            }
             issue(
                 &self.config,
                 diagnostics,

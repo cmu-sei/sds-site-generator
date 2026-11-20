@@ -1,15 +1,14 @@
 # Writing guide
 
-Each Markdown file in `content/` becomes a page; `index.md` is its directory's
-landing page.
+Use these local link examples and the reference guides when adding content.
 
 ## Headings
 
-Use one `#` heading, then `##` sections and `###` subsections. Do not skip levels.
+Start with the [complete page example](https://cmu-sei.github.io/sds-site-generator/guides/authoring/markdown/#a-complete-page).
 
 ## Links
 
-Link to other Markdown files using their relative filenames:
+From this page, link to the other starter pages:
 
 ::code-block
 ```markdown
@@ -19,92 +18,33 @@ Link to other Markdown files using their relative filenames:
 ```
 ::
 
-The generator checks page and heading links before publishing.
+See [Pages and links](https://cmu-sei.github.io/sds-site-generator/guides/authoring/structure/)
+for directories, ordering, routes, and heading IDs.
 
 ## Images
 
-Put images in `public/` and describe their purpose:
-
-::code-block
-```markdown
-![A diagram showing the review process](/images/review.png)
-```
-::
-
-Use local PNG, JPEG, GIF, WebP, AVIF, or sanitized SVG; dimensions are added
-automatically. Resize and compress each image to at most **1 MiB (1,048,576 bytes)**.
-For decorative images, use an empty description and the title `"decorative"`.
+Follow [Images and downloads](https://cmu-sei.github.io/sds-site-generator/guides/authoring/assets/)
+for file placement, image descriptions, supported formats, and size limits.
 
 ## Optional metadata
 
-Optional metadata goes first: YAML between `---` lines or TOML between `+++`:
-
-::code-block
-```yaml
----
-title: Writing guide
-description: A helpful summary for search engines.
-navigation:
-  title: Writing
-tags: [documentation]
----
-```
-::
-
-YAML accepts extra metadata such as tags. `navigation: false` hides only the
-menu entry; the page stays published and searchable. For TOML:
-
-::code-block
-```toml
-+++
-title = "A shorter navigation title"
-description = "A helpful summary for search engines."
-order = 2
-draft = false
-+++
-```
-::
-
-Unknown TOML settings fail validation. Fenced YAML in the body is code, not metadata.
+Use [front matter](https://cmu-sei.github.io/sds-site-generator/guides/authoring/markdown/#front-matter)
+for titles, descriptions, ordering, drafts, and navigation labels.
 
 ## Code examples
 
-Wrap a fenced example with `::code-block` and a closing `::` line, as above.
-The default is neutral; `quality="good"` and `quality="bad"` label compliant
-and noncompliant code. JavaScript adds copy/fullscreen controls; code stays
-readable without it.
-
-Choose highlighting with a lowercase fence label: `markdown`, `toml`,
-`powershell`, or `ini`.
-The bundled grammars also cover C, C++, Java, Perl, free-form Fortran,
-JavaScript, TypeScript, Python, shell, HTML, XML, JSON, YAML, and diff, with
-CSS, GLSL, SQL, regular-expression, and C++ macro dependency grammars.
-Use `text` or no label for plain text; unknown labels are not highlighted.
-Highlighting needs JavaScript and uses local assets.
+See [Code examples](https://cmu-sei.github.io/sds-site-generator/guides/authoring/components/#code-examples)
+for wrapper syntax, highlighting, quality labels, and short/complete versions.
 
 ## Callouts
 
-Use semantic tones and visual variants matching SDS Lite:
-
-::code-block
-```markdown
-::callout{tone="warning" variant="outline" size="sm"}
-**Warning:** Check local links before publishing.
-::
-```
-::
-
-Tones are `neutral` (default), `accent`, `info`, `success`, `warning`, and
-`danger`. Omit `variant` for a subtle surface, or use `outline` or `bold`.
-Sizes are `xs`, `sm`, `md` (default), and `lg`.
+Use the [callout reference](https://cmu-sei.github.io/sds-site-generator/guides/authoring/components/#callouts)
+for notes and warnings.
 
 ## Importing existing content
 
-Semantic HTML, tables, anchors, and legacy code-example wrappers are supported;
-scripts and unsafe attributes are removed. Set `compatibility = true` in
-`site.toml` to turn selected import errors into warnings. Review
-`dist/_site/diagnostics.json`; `sds-site-generator check --strict` fails on
-warnings. Duplicate URLs always stop the build.
+Read [Compatibility mode](https://cmu-sei.github.io/sds-site-generator/guides/start/configuration/#compatibility-mode)
+before importing legacy content.
 
 ## Next steps
 

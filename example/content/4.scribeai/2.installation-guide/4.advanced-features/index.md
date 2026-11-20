@@ -1,6 +1,0 @@
----
-tags: tagging
----
-
-# Advanced Features
-

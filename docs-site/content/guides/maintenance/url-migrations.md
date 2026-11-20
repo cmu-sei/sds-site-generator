@@ -3,8 +3,7 @@ order: 2
 ---
 # Stable URLs and migrations
 
-Separate navigation changes from URL changes. A page's route comes from its
-source path, not its title, navigation label, or `order`.
+A page's route comes from its source path, not its title, navigation label, or `order`.
 
 ## Prefer changes that keep links working
 
@@ -18,8 +17,7 @@ source path, not its title, navigation label, or `order`.
 | Rename `installation.md` to `setup.md` | Changes `/installation/` to `/setup/` |
 | Change the publishing URL | Changes canonical URLs and possibly the deployment prefix |
 
-Keep a stable filename when only the page's visible wording changes.
-For a frequently linked section, use an
+Keep filenames stable when editing wording. Use an
 [explicit heading ID](../authoring/structure.md#link-to-headings) before changing its text.
 
 ## Reorganize into nested sections
@@ -46,18 +44,15 @@ After:
 5. Run strict validation and inspect the nested sidebar.
 6. Handle the old public URLs before deploying.
 
-If existing URLs are important, keep the files where they are and use a custom
-main-menu group instead. A header-menu hierarchy does not require the same
-directory hierarchy.
+To keep existing URLs, leave files in place and use
+[custom main navigation](../start/configuration.md#main-navigation) instead.
 
 ## Preserve old destinations
 
-There is no front-matter `slug`, `alias`, or redirect setting. Configure
-permanent redirects at your host if it supports them. GitHub Pages does not
-provide a general server-side redirect rules file.
+Configure permanent redirects at your host; there is no `slug`, `alias`, or
+redirect setting. GitHub Pages has no general server-side redirect rules file.
 
-An alternative is to leave a short page at the old source path with a normal
-link to the new destination:
+Alternatively, leave a page at the old source path linking to the new one:
 
 ::code-block
 ```markdown
@@ -72,23 +67,18 @@ Continue to [the installation guide](/guides/setup/installation/).
 ```
 ::
 
-This is a regular published page, not an HTTP redirect, and it remains
-searchable. Preserve important old heading IDs on that page if external links
-use fragments; linking only to a new page cannot preserve every deep link.
-
-Local validation cannot discover links from other websites, bookmarks, or
-older releases. Keep a list of important old URLs and test them on the host.
+This remains a searchable page, not an HTTP redirect. Preserve old heading IDs
+for inbound fragment links. Local validation cannot check other sites'
+links or bookmarks; test important old URLs on the host.
 
 ## Move to another domain or deployment prefix
 
-Set `url` to the final public address and rebuild the whole site. Authored
-site-root links automatically receive the new prefix. Fully qualified links
-to the old origin may become external links, so find and update them explicitly.
+Set `url` to the new address and rebuild. Site-root links receive the new prefix;
+update fully qualified old-origin links explicitly.
 
-Deploy the complete output, update the host's domain/DNS settings as required,
-and arrange old-origin redirects separately. Verify a nested page, image,
-download, search, canonical URL, and sitemap at the new location.
+Deploy the complete output, update domain/DNS settings, and arrange old-origin
+redirects. Test a nested page, image, download, search, canonical URL, and sitemap.
 
-For imported sites, changing `compatibility` from `true` to `false` also
-changes underscore routes to hyphenated routes. Treat that switch as a URL
-migration, not just a validation preference.
+For imported sites, also review
+[Compatibility mode: Disable it deliberately](../start/configuration.md#disable-it-deliberately)
+before changing that setting.

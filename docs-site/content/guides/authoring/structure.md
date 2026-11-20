@@ -3,8 +3,7 @@ order: 1
 ---
 # Pages and links
 
-Your directory layout defines page URLs and the documentation tree.
-Use predictable filenames to keep links stable.
+Your directory layout defines page URLs and navigation.
 
 ## Arrange the files
 
@@ -37,24 +36,24 @@ in `public/`. Do not use symbolic links in either directory or for `site.toml`.
 
 Routes drop numeric prefixes followed by a dot, lowercase words, and replace
 spaces and underscores with hyphens: `API Reference.md` becomes `/api-reference/`.
-Compatibility mode keeps underscores.
+See [compatibility mode](../start/configuration.md#compatibility-mode) for legacy routes.
 
-`index.md` is a directory's landing page. The home route needs a published page.
-Other directories group descendants without an index, but adding one gives
-the group a title and destination.
+`index.md` is a directory's landing page and is required at the content root.
+Other directories can group pages without one; adding one supplies a group
+title and destination.
 
 Routes must be unique: `guide.md` and `guide/index.md` collide. `/search/`,
-`/404/`, and routes under `/_site/` are reserved. There is no redirect setting;
-renaming a source may require redirects supplied by your host.
+`/404/`, and routes under `/_site/` are reserved. Before renaming published
+pages, review [URL migrations](../maintenance/url-migrations.md).
 
 ## Control ordering and labels
 
-Siblings sort by front-matter `order` (default `0`, smallest first), then source
+Siblings sort by front-matter `order` (smallest first), then source
 path. Filename prefixes sort as text, not numbers: use `01.`, `02.`, ..., `10.`
 consistently, or set `order`.
 
-Set group order on each directory's index page. Page titles label navigation;
-override with `navigation.title`, or hide a page with `navigation: false`.
+Set group order on each directory's index page. Use
+[front matter](markdown.md#front-matter) for page labels and visibility.
 
 Top-level content supplies the default main menu; section descendants supply
 the sidebar and previous/next links. [Custom main navigation](../start/configuration.md#main-navigation)
@@ -62,19 +61,20 @@ changes the menu, not the content tree.
 
 ## Link to pages
 
-Prefer source-relative Markdown links. Include the real source filename,
-including any numeric prefix:
+Use source-relative Markdown links with the real filenames and numeric prefixes.
+From `content/2.guides/1.index.md` in the tree above:
 
 ::code-block
 ```markdown
-[Installation](2.guides/2.installation.md)
-[Publishing](../3.publishing.md)
-[Section](2.guides/2.installation.md#requirements)
+[Installation](2.installation.md)
+[Publishing](3.publishing.md)
+[Home](../1.index.md)
+[Requirements](2.installation.md#requirements)
 ```
 ::
 
-Adjust these example paths to your files. `.md` links resolve from the source
-file; other relative links resolve from the generated page URL.
+`.md` links resolve from the source file; other relative links resolve from
+the generated page URL.
 
 Site-root links are often clearer:
 
@@ -88,10 +88,10 @@ Site-root links are often clearer:
 ```
 ::
 
-Do not include the deployment prefix: with `url = "https://example.org/docs/"`,
-`/guides/installation/` becomes `/docs/guides/installation/` automatically.
+Omit the deployment prefix: `/guides/installation/` automatically becomes
+`/docs/guides/installation/` when the site's URL ends in `/docs/`.
 Validation checks local pages, files, and fragments, not external availability.
-Use `https://`, not protocol-relative `//` URLs.
+Use `https://`, not `//`, for web links.
 
 ## Link to headings
 

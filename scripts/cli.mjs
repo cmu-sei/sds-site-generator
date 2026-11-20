@@ -11,7 +11,7 @@ try {
     process.on(signal, () => child.kill(signal))
   }
   child.on('error', error => {
-    console.error(`Cannot start sds-site-generator: ${error.message}. Reinstall the package, or run npm run build in a source checkout.`)
+    console.error(`Cannot start sds-site-generator: ${error.message}. Reinstall the package, or run npm run build:generator in a source checkout.`)
     process.exitCode = 1
   })
   child.on('exit', (code, signal) => {

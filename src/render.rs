@@ -29,6 +29,7 @@ pub(crate) fn write(site: &Site, output: &Path) -> Result<()> {
         ),
         ("sds-lite/LICENSE.txt", SDS_LICENSE),
         ("sds-lite/package/assets/sei-wordmark.svg", SDS_WORDMARK),
+        ("site.css", include_bytes!("../assets/site.css").as_slice()),
         (
             "highlight.js",
             include_bytes!("../assets/highlight.js").as_slice(),
@@ -238,6 +239,14 @@ fn shell(
     } else {
         String::new()
     };
+    let highlight_script = if page.is_some_and(|page| page.html.contains("<pre")) {
+        format!(
+            "<script type=\"module\" src=\"{}\"></script>",
+            asset("highlight.js")
+        )
+    } else {
+        String::new()
+    };
     format!(
         r##"<!doctype html>
 <html lang="{language}">
@@ -259,10 +268,11 @@ fn shell(
 <link rel="stylesheet" href="{sds}">
 <link rel="stylesheet" href="{brand}">
 <link rel="stylesheet" href="{documentation_css}">
+<link rel="stylesheet" href="{site_css}">
 <script type="module" src="{auto}"></script>
 <script type="module" src="{search_script}"></script>
 <script type="module" src="{documentation_script}"></script>
-<script type="module" src="{highlight_script}"></script>
+{highlight_script}
 {structured}{robots}
 </head>
 <body data-sds-root class="sds-document" data-sds-theme="forge" data-sds-color-scheme="system">
@@ -314,12 +324,12 @@ fn shell(
         sds = asset("sds-lite/sds.css"),
         brand = asset("sds-lite/brand.css"),
         documentation_css = asset("sds-lite/documentation.css"),
+        site_css = asset("site.css"),
         auto = asset("sds-lite/auto.js"),
         license = asset("sds-lite/LICENSE.txt"),
         search_script = asset("search.js"),
         search_url = escape(&config.href("/search/")),
         documentation_script = asset("sds-lite/documentation.js"),
-        highlight_script = asset("highlight.js"),
         shield = SHIELD,
         theme_icons = format_args!(
             "{}{}",

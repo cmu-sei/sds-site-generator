@@ -1,29 +1,16 @@
 # Publishing
 
-Publish your site to a static host with HTTPS and directory index support.
+Use the deployment guide to validate and publish your site.
 
 ## Set your address
 
-In `site.toml`, set `url` to your public address, including any subdirectory:
-`https://example.org/my-docs/`.
+Choose your [publishing URL](https://cmu-sei.github.io/sds-site-generator/guides/start/configuration/#choose-the-publishing-url).
 
 ## Check and build
 
-Stop preview with Ctrl+C, then run:
-
-::code-block
-```sh
-sds-site-generator check .
-sds-site-generator build .
-```
-::
-
-Fix any errors, then upload the **contents of `dist/`** to your host.
-For GitHub Pages, use GitHub Actions with `dist/` as the Pages artifact.
+Follow [Build and deploy](https://cmu-sei.github.io/sds-site-generator/guides/publishing/deployment/)
+for validation commands, output handling, static hosting, and GitHub Pages.
 
 ## Before sharing
 
-- Check your content for accuracy and clarity.
-- Check nested pages, links, images, downloads, search, and a nonexistent URL.
-- Test the deployed site on a phone, with a keyboard, and with a screen reader.
-- Run automated checks such as Lighthouse alongside these manual tests.
+Complete the [pre-publication checklist](https://cmu-sei.github.io/sds-site-generator/guides/publishing/deployment/#before-sharing-the-url).

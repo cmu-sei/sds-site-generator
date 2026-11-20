@@ -3,8 +3,7 @@ order: 4
 ---
 # Maintain and migrate
 
-Bring existing content into the generator, resolve validation issues, and
-reorganize a published site without losing important links.
+Import content, resolve errors, and preserve published URLs.
 
 | Guide | When to use it |
 | --- | --- |

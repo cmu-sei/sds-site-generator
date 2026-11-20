@@ -5,8 +5,8 @@ navigation:
 ---
 # Writing Markdown
 
-Write Markdown with clear headings. Tables, strikethrough, smart punctuation,
-and [component wrappers](components.md) are supported.
+Write pages in Markdown, with tables, strikethrough, smart punctuation,
+and [component wrappers](components.md).
 
 ## A complete page
 
@@ -34,10 +34,9 @@ Ask your team which operating systems it supports.
 ```
 ::
 
-Use one `#` heading, then `##` sections and `###` subsections without skipping
-levels. A missing H1 is generated from the page title; metadata does not replace
-an existing H1. All headings have anchors, but only `##` sections appear in
-"On this page."
+Use one `#` heading, then `##` and `###` without skipping levels. A missing H1
+is generated from the title; title metadata does not replace an existing H1.
+All headings have anchors; only `##` sections appear in "On this page."
 
 ## Front matter
 
@@ -58,15 +57,16 @@ navigation = { title = "Installation" }
 
 | Field | Default and effect |
 | --- | --- |
-| `title` | First H1, otherwise the filename with its order prefix removed |
+| `title` | First H1, otherwise the filename without its order prefix, with hyphens/underscores replaced by spaces |
 | `description` | First nonempty paragraph, truncated to 160 characters |
 | `order` | `0`; signed 32-bit integer used to sort sibling pages |
 | `draft` | `false`; `true` excludes the page from output, navigation, sitemap, and search |
-| `navigation` | Visible; `false` hides the page from navigation, or an object sets `title` |
+| `navigation` | Visible; `false` hides generated page entries, or an object sets the navigation `title` |
 
-Every published page needs a description or introductory paragraph. Hidden pages
-are **still published and searchable**, not private. Links to drafts fail
-validation; the home page cannot be a draft.
+Every published page needs a description or introductory paragraph.
+`navigation: false` is **not privacy**: the page remains published and searchable.
+Explicit [main-menu entries](../start/configuration.md#main-navigation) are configured
+separately. Draft source files are unresolved link targets; the home page must be published.
 
 YAML accepts extra metadata such as `tags`; only the fields above affect output.
 Unknown top-level TOML fields fail validation. Metadata is limited to 64 KiB.
@@ -89,8 +89,8 @@ Use ~~strikethrough~~ sparingly.
 ```
 ::
 
-Separate blocks with blank lines. Smart punctuation converts prose quotes and
-punctuation, leaving code literal. Escape Markdown with backslashes: `\*literal\*`.
+Separate blocks with blank lines. Smart punctuation affects prose, not code.
+Escape Markdown with backslashes: `\*literal\*`.
 
 ## Tables
 
@@ -103,32 +103,14 @@ punctuation, leaving code literal. Escape Markdown with backslashes: `\*literal\
 ```
 ::
 
-Include a header row. Wide tables scroll horizontally; JavaScript adds
-keyboard-accessible sorting to simple tables. Tables with merged cells or
-interactive headers stay static. Use lists for non-tabular content.
+Wide tables scroll; JavaScript adds keyboard-accessible sorting unless headers
+are interactive or cells are merged. Follow [accessible table guidance](accessibility.md#keep-tables-simple).
 
 ## Code
 
-Use inline backticks for short literals. Wrap language-tagged fences for
-copy and fullscreen controls:
-
-::code-block
-````markdown
-::code-block
-```sh
-sds-site-generator check . --strict
-```
-::
-````
-::
-
-The [code-block reference](components.md#code-examples) covers titles, compliance
-badges, and short/complete examples. Plain fences remain keyboard-focusable and
-horizontally scrollable, without copy or fullscreen controls.
-
-The fence's [language label](components.md#syntax-highlighting) selects bundled
-highlighting. Use `text` for plain output; unknown or missing labels stay
-unhighlighted. Code remains readable without JavaScript.
+Use inline backticks for short literals and fences for longer examples.
+See [Code examples](components.md#code-examples) for wrapper syntax, copy/fullscreen
+controls, titles, quality labels, and highlighting languages.
 
 Enclose triple-backtick examples in four-backtick fences. Component syntax
 inside a fence stays literal.
@@ -138,9 +120,9 @@ inside a fence stays literal.
 Add semantic HTML such as `<sup>`, `<sub>`, or explicit heading IDs. HTML uses
 the same heading, link, image, and search processing as Markdown.
 
-Sanitization removes and diagnoses scripts, forms, iframes, event handlers,
-unsafe attributes, and unsupported markup/styles. Only conservative inline
-layout styles are retained, not arbitrary theme styling.
+Sanitization removes scripts, forms, iframes, event handlers, and unsafe or
+unsupported markup/styles with diagnostics. A limited set of inline layout
+and text styles is retained.
 
 Use explicit links and [supported components](components.md).
 Footnotes, task-list checkboxes, math rendering, heading attribute shorthand,

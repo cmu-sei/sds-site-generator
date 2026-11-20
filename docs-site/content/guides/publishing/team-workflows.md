@@ -3,7 +3,7 @@ order: 2
 ---
 # Team workflows and CI
 
-Version your source, pin the generator, and validate changes locally and in CI.
+Version your source, pin the generator, and validate changes in CI.
 
 ## What belongs in the repository
 
@@ -17,8 +17,7 @@ a token-free `.npmrc`:
 ```
 ::
 
-Ignore `dist/` and `node_modules/`. Store credentials in user configuration or
-CI secrets, never in the repository or public assets.
+Ignore `dist/` and `node_modules/`. Keep credentials in user configuration or CI secrets.
 [Set up npm](../start/installation.md#optional-npm-installation) with an exact
 generator version and the scripts used below.
 
@@ -30,9 +29,7 @@ generator version and the scripts used below.
 4. Open a pull request describing URL changes, moved downloads, and new images.
 5. Publish only after review and a successful build.
 
-Review image descriptions, headings, examples, and link labels manually.
-For compatibility imports, require strict validation before release and track
-editorial repairs separately.
+Review content using [Accessible authoring](../authoring/accessibility.md).
 
 ## A minimal npm-based CI check
 
@@ -72,8 +69,8 @@ jobs:
 ```
 ::
 
-Commit the lockfile and grant the repository Actions read access to the package.
-Adjust `main` for your branch; keep action revisions and Node maintained.
+Grant the repository Actions read access to the package. Adjust `main` for your
+branch and keep action revisions and Node current.
 Add a [deployment workflow](deployment.md#github-pages-your-own-site) to publish.
 
 Forked pull requests may lack package access. Use a trusted review/build path;
@@ -84,19 +81,15 @@ your approved process, then run `check . --strict` and `build .`.
 
 ## Drafts, hidden pages, and private documentation
 
-`draft: true` excludes a page from the next build; links to it fail validation.
-Replace the old deployment completely so previously published copies are removed.
+Use [front matter](../authoring/markdown.md#front-matter) for drafts and hidden
+pages, and [deploy complete builds](deployment.md#what-to-upload) to remove old copies.
+Hidden pages, unlinked assets, and robots rules are **not access control**.
 
-`navigation: false` hides only the menu entry; the page stays accessible and
-searchable. Unlinked pages, asset URLs, and robots rules are not access control.
-
-For private documentation, enforce authentication at the host for **all**
-pages, search data, downloads, and assets. The host must provide login,
-authorization, encryption, and any per-page access policies.
+For private sites, enforce authentication and authorization at the host for
+**all** pages, search data, downloads, and assets, including any per-page policies.
 
 ## Upgrade deliberately
 
-Install the selected release version with `--save-dev --save-exact`, review
-the release notes, and commit both npm manifest and lockfile. Rebuild and check
-representative pages, nested navigation, search, and downloads before release.
-For standalone use, record the executable version in contributor instructions.
+Review release notes, install with `--save-dev --save-exact`, and commit the
+manifest and lockfile. For standalone use, record the version in contributor
+instructions. Rebuild and test pages, navigation, search, and downloads.

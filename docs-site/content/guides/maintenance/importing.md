@@ -3,8 +3,7 @@ order: 1
 ---
 # Importing and troubleshooting
 
-Use normal validation for new content. Compatibility mode lets you preview
-imported Markdown while identifying migration work.
+Import Markdown and assets, then use diagnostics to resolve migration issues.
 
 ## Import an existing site
 
@@ -12,82 +11,75 @@ imported Markdown while identifying migration work.
 2. Replace its starter `content/` with the imported Markdown.
 3. Copy images and downloads into `public/`.
 4. Set the real name and publishing URL in `site.toml`.
-5. If necessary, set `compatibility = true` while repairing the import.
+5. If necessary, enable [compatibility mode](../start/configuration.md#compatibility-mode)
+   while repairing the import.
 6. Build and review the diagnostics; then run `check . --strict`.
 
-Compatibility mode preserves route underscores and warns about missing links,
-missing image descriptions, heading repairs, unsupported markup, and
-sanitization changes. It supports YAML metadata, semantic HTML, anchors,
-attachments, and documented wrappers, not arbitrary Nuxt/Vue widgets.
-Use the [current callout syntax](../authoring/components.md#callouts);
-legacy callouts require compatibility mode and produce migration warnings.
+See [diagnostics](../start/configuration.md#review-diagnostics) and
+[disabling compatibility mode](../start/configuration.md#disable-it-deliberately)
+before publishing.
 
-Invalid metadata, configuration, or menu targets; duplicate URLs; unsafe
-filenames; and output collisions still fail validation.
+## Audit the CERT import
 
-The terminal shows up to 20 warnings; builds write every file, line, and message
-to `dist/_site/diagnostics.json`. `check . --strict` fails if warnings remain.
+From the generator checkout, compare the import against its existing static
+output, including headings, code, links, attachments, sitemap, and search:
 
-Before disabling compatibility mode on a published site, plan the
-[URL migration](url-migrations.md): underscores become hyphens.
+::code-block
+```sh
+cargo run --locked -- build cert-example
+python3 tools/audit-dist.py \
+  --reference /path/to/secure-coding-standards/dist \
+  --candidate cert-example/dist \
+  --base-url https://cmu-sei.github.io/secure-coding-standards/ \
+  --output tools/reports/cert-dist.json
+node tools/audit-cert.mjs \
+  --reference /path/to/secure-coding-standards/dist \
+  --candidate cert-example/dist \
+  --output tools/reports/cert-browser.json
+```
+::
+
+The browser audit needs `tools/` dependencies and Playwright Chromium. It
+manages its own loopback servers and checks all six language landing pages,
+a rule, and a large analyzer table at desktop/mobile sizes, including search,
+code controls, sorting, dark mode, keyboard use, and reading without JavaScript.
+
+Both tools write JSON and fail when their gates fail. The reference build is
+the inherited-defect baseline, compared by page and destination, not warning
+counts. New broken destinations remain failures; accessibility findings are
+compared at the same page and viewport. Review source/output differences with
+content owners and retain the reference build and reports with the release.
 
 ## Legacy callouts
 
-With `compatibility = true`, existing callouts such as this still render:
-
-::code-block
-```markdown
-::callout{variant="orange" type="outline" size="sm"}
-**Warning:** Check local links.
-::
-```
-::
-
-For normal mode, convert that example to:
-
-::code-block
-```markdown
-::callout{tone="warning" variant="outline" size="sm"}
-**Warning:** Check local links.
-::
-```
-::
-
-Map old color variants to tones: `blue`/`indigo` to `info`, `green`/`teal` to
-`success`, `orange` to `warning`, `red` to `danger`, `gray` to `neutral`, and
-`purple` to `accent`. Rename `type` to `variant`, omitting it when the old
-type was `subtle`. Keep `size` unchanged.
-
-Update every legacy callout before `check --strict` can pass. Never mix `tone`
-with legacy properties. A bare `::callout` uses the neutral default in either mode.
+See [Site configuration: Legacy callouts](../start/configuration.md#legacy-callouts)
+for conversion examples and the color-to-tone mapping.
 
 ## Common problems
 
 | Message or symptom | What to do |
 | --- | --- |
 | Missing `site.toml` | Run from the site root, or pass its directory explicitly |
-| Duplicate URL | Check numeric prefixes, normalized names, and `page.md` versus `page/index.md`; rename deliberately |
+| Duplicate URL | Review [route rules](../authoring/structure.md#arrange-the-files) before renaming |
 | Missing home page | Add a published `content/index.md` (a numeric prefix is also allowed) |
-| Missing description | Add an introductory paragraph or nonempty metadata `description` |
-| Heading skips a level | Follow H1 with H2, H2 with H3, and so on |
-| Missing page or fragment | Check source-relative `.md` paths, numeric prefixes, drafts, and generated heading IDs |
-| Image validation fails | Check the local path, alt text, dimensions, format, and 1 MiB limit |
-| Unsupported component/property | Use only the documented callout and code-block syntax |
-| Refusing to replace `dist/` | Move hand-authored output elsewhere; do not fabricate an ownership marker |
+| Missing description | Add a [description or introductory paragraph](../authoring/markdown.md#front-matter) |
+| Heading skips a level | Follow the [page heading structure](../authoring/markdown.md#a-complete-page) |
+| Missing page or fragment | Check [link paths and heading IDs](../authoring/structure.md#link-to-pages) |
+| Image validation fails | Check the [image requirements](../authoring/assets.md#add-an-image) |
+| Unsupported component/property | Use the [supported syntax](../authoring/components.md) |
+| Refusing to replace `dist/` | Move hand-authored output elsewhere |
 | Preview shows old content | Read the terminal for a failed rebuild; refresh after a successful one |
-| Port already in use | Choose a different `--port`; do not stop unrelated processes |
+| Port already in use | Choose a different `--port` |
 | Pages load without styles | Check `url`, the deployment prefix, and which directory was uploaded |
-| Search fails from a local file | Use preview or an HTTP(S) host instead of `file://` |
+| Search fails | Follow [search diagnostics](../publishing/search-and-hosting.md#diagnose-search-failures) |
 
-If `url` contains `/docs/`, assets load from `/docs/`, not `/`. Use built-in
-preview or configure your static server to match that prefix.
+Use preview or configure your local server to match the `url` deployment prefix.
 
 ## Getting help
 
 Report generator bugs in the
 [issue tracker](https://github.com/cmu-sei/sds-site-generator/issues).
-Contact your host or internal support for account, DNS, authentication, or
-policy problems. Include:
+For hosting/account issues, contact your host. For generator bugs, include:
 
 ::code-block
 ```text
@@ -101,18 +93,11 @@ Smallest site.toml and Markdown example that reproduces it:
 ```
 ::
 
-For preview or hosting issues, add the deployment prefix, affected URL, and
-browser network/console errors. Include relevant compatibility diagnostics.
-
-Use a small synthetic example, not private documentation. Remove tokens,
-passwords, private URLs, personal data, and confidential content from logs.
-Report sensitive security issues through your approved private channel;
-never post credentials or sensitive exploit details publicly.
+For preview or hosting issues, add the URL, deployment prefix, browser errors,
+and relevant diagnostics. Use a minimal example without private content or
+credentials. Report sensitive security issues through a private channel.
 
 ## Review beyond validation
 
-Validation checks local links, structure, and selected content constraints.
-Manually test external links and review image descriptions and source
-attachments. Follow [accessible authoring](../authoring/accessibility.md)
-to test the deployed site. Pin the generator version and review upgrade warnings.
-For structure and configuration, see the [user guide](../index.md).
+Use the [pre-publication checklist](../publishing/deployment.md#before-sharing-the-url)
+for checks beyond automated validation.
