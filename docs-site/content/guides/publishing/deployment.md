@@ -83,8 +83,13 @@ origin's `/robots.txt`, not just the project-level file.
 
 The Pages workflow publishes `docs-site/`. In **Settings > Pages**, select
 **GitHub Actions** and configure the `github-pages` environment, approvals,
-and optional custom domain. Push to `main` or run the workflow on the default
-branch; use the deployment URL it reports.
+and optional custom domain. Publishing a stable generator release automatically
+deploys its documentation; beta releases and ordinary pushes to `main` do not.
+To retry a deployment, run **Deploy documentation to Pages** from `main` with
+the latest published stable release tag, such as `v0.2.0`. Use the deployment
+URL it reports. See the
+[maintainer release guide](https://github.com/cmu-sei/sds-site-generator/blob/main/RELEASING.md)
+for release preparation and recovery.
 
 The workflow builds with Pages' URL in a temporary copy and deploys
 `pages-dist/`, leaving source configuration unchanged. See the

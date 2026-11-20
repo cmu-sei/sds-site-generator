@@ -29,7 +29,9 @@ export function releaseIdentity(tag, owner, directory = root) {
   const manifest = metadata(directory)
   if (tag !== `v${manifest.version}`) throw new Error('The release tag must match the Cargo and npm version exactly.')
   if (!manifest.name.startsWith(`@${owner.toLowerCase()}/`)) throw new Error('The npm scope must match the GitHub repository owner.')
-  return { version: manifest.version, distTag: semver.prerelease(manifest.version) ? 'next' : 'latest' }
+  const prerelease = semver.prerelease(manifest.version)
+  if (prerelease && !/^beta\.[1-9]\d*$/.test(prerelease.join('.'))) throw new Error('Only beta.N prereleases are supported.')
+  return { version: manifest.version, distTag: prerelease ? 'beta' : 'latest' }
 }
 
 export function run(command, args, options = {}) {

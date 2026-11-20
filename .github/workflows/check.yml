@@ -5,9 +5,15 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      commit:
+        description: Exact merged release commit to validate
+        type: string
+        required: true
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: check-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -22,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
+          ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -29,6 +36,11 @@ jobs:
           cache: npm
       - run: npm install --global npm@12.2.1
       - run: npm ci --ignore-scripts
+      - name: Validate release PR metadata
+        if: github.event_name != 'workflow_call'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/release.mjs check-pr
       - run: npm run test:package
       - id: matrix
         run: echo "matrix=$(node scripts/package.mjs matrix)" >> "$GITHUB_OUTPUT"
@@ -52,6 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
+          ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -107,6 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
+          ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -140,6 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
+          ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:

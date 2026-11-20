@@ -25,3 +25,7 @@ node scripts/package.mjs pages https://your-org.github.io/your-repository/
 
 Only the contents of `pages-dist/` are deployed. See
 [the publishing guide](content/guides/publishing/deployment.md) for author-facing instructions.
+
+Production Pages deploys the latest published stable generator release, not
+every push to `main`. See [the maintainer release guide](../RELEASING.md) for
+release preparation, automatic deployment, and manual deployment retries.

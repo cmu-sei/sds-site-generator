@@ -1,0 +1,52 @@
+name: Release - Create Release PR
+run-name: Prepare ${{ inputs.channel }} release ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: stable publishes latest; beta publishes the next beta
+        type: choice
+        options: [stable, beta]
+        default: stable
+        required: true
+      version:
+        description: Base version without v or suffix (for example 0.2.0)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare version files, notes, and release PR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: release-state
+      cancel-in-progress: false
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      packages: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+      - run: npm install --global npm@12.2.1
+      - run: npm ci --ignore-scripts
+      - name: Prepare the release and explicitly start its checks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_VERSION: ${{ inputs.version }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+        run: node scripts/release.mjs prepare

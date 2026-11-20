@@ -90,8 +90,10 @@ which stages `target/release/` for the current Node.js platform and architecture
 The generator build stages the current platform only; packaging requires all six release
 binaries. GitHub Actions runs `npm run build`, verifies Rust discovery with
 Cargo removed from `PATH`, and runs the package tests on all six supported
-OS/architecture combinations. It also packages tagged releases and deploys the
-documentation site to Pages.
+OS/architecture combinations. Releases are prepared through an automated release
+PR; merging it publishes the tested package and native binaries. Stable releases
+deploy their documentation to Pages. See [the maintainer release guide](RELEASING.md)
+for repository setup, releasing, retries, and recovery.
 
 Browser and asset checks live in `tools/`. CI requires the search, component,
 highlighting, and starter-site browser audits. After installing its

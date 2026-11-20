@@ -176,14 +176,14 @@ test('unsupported platforms fail explicitly rather than running the wrong binary
 test('release identity checks version, tag, scope, and prerelease channel', () => {
   const manifest = metadata()
   const owner = manifest.name.split('/')[0].slice(1)
-  assert.deepEqual(releaseIdentity(`v${manifest.version}`, owner), { version: manifest.version, distTag: 'latest' })
+  assert.deepEqual(releaseIdentity(`v${manifest.version}`, owner), { version: manifest.version, distTag: manifest.version.includes('-beta.') ? 'beta' : 'latest' })
   assert.throws(() => releaseIdentity('v9.9.9', owner), /tag must match/)
   assert.throws(() => releaseIdentity(`v${manifest.version}`, 'another-owner'), /scope must match/)
   const temporary = mkdtempSync(join(tmpdir(), 'site-generator-metadata-'))
   try {
     writeFileSync(join(temporary, 'package.json'), JSON.stringify({ ...manifest, version: '0.2.0-beta.1' }))
     writeFileSync(join(temporary, 'Cargo.toml'), '[package]\nversion = "0.2.0-beta.1"\n')
-    assert.equal(releaseIdentity('v0.2.0-beta.1', owner, temporary).distTag, 'next')
+    assert.equal(releaseIdentity('v0.2.0-beta.1', owner, temporary).distTag, 'beta')
     writeFileSync(join(temporary, 'Cargo.toml'), '[package]\nversion = "0.1.0"\n')
     assert.throws(() => metadata(temporary), /same valid release version/)
   } finally {
@@ -292,10 +292,23 @@ test('npm tarball supports offline installation and repo-local documentation scr
 })
 
 test('workflows use direct PR checks, tested release artifacts, and isolated Pages permissions', () => {
-  const workflows = Object.fromEntries(['check', 'release', 'pages'].map(name => [name, parseYaml(readFileSync(join(root, `.github/workflows/${name}.yml`), 'utf8'))]))
+  const workflows = Object.fromEntries(['check', 'release', 'pages', 'prepare-release', 'recover-release'].map(name => [name, parseYaml(readFileSync(join(root, `.github/workflows/${name}.yml`), 'utf8'))]))
   assert.ok(Object.hasOwn(workflows.check.on, 'pull_request'))
   assert.ok(Object.hasOwn(workflows.check.on, 'workflow_call'))
   assert.equal(workflows.release.jobs.build.uses, './.github/workflows/check.yml')
+  assert.equal(workflows.release.jobs.build.with.commit, '${{ github.event.pull_request.merge_commit_sha }}')
+  assert.deepEqual(workflows.release.on.pull_request.types, ['closed'])
+  assert.equal(workflows.release['run-name'], 'Publish release PR #${{ github.event.pull_request.number }}', 'recovery must identify publication runs by their PR number')
+  assert.equal(workflows.release.on.push, undefined)
+  assert.equal(workflows.pages.on.push, undefined)
+  assert.deepEqual(workflows.pages.on.workflow_run.workflows, ['Automatic - Publish Release'])
+  assert.equal(workflows.release.jobs.publish.concurrency.group, workflows['prepare-release'].jobs.prepare.concurrency.group)
+  assert.equal(workflows.release.jobs.publish.concurrency.group, workflows['recover-release'].jobs.recover.concurrency.group)
+  for (const job of Object.values(workflows.check.jobs)) {
+    for (const step of job.steps || []) {
+      if (step.uses?.startsWith('actions/checkout@')) assert.equal(step.with.ref, '${{ inputs.commit || github.sha }}')
+    }
+  }
   assert.equal(workflows.release.jobs.publish.permissions.packages, 'write')
   assert.equal(workflows.pages.jobs.build.permissions.pages, 'read')
   assert.equal(workflows.pages.jobs.deploy.permissions.pages, 'write')

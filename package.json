@@ -28,7 +28,7 @@
     "test": "npm run build:generator && npm run test:generator && npm run test:package",
     "build:generator": "node scripts/package.mjs build",
     "test:generator": "node scripts/package.mjs test",
-    "test:package": "node --test tests/package.test.mjs",
+    "test:package": "node --test tests/package.test.mjs tests/release.test.mjs",
     "check:release": "node scripts/package.mjs verify",
     "prepack": "npm run check:release"
   },
