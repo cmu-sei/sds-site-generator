@@ -897,6 +897,41 @@ fn duplicate_routes_are_rejected() {
 }
 
 #[test]
+fn nested_public_assets_validate_each_filename_component() {
+    let (_temp, root) = fixture();
+    fs::create_dir_all(root.join("public/downloads")).unwrap();
+    fs::write(root.join("public/downloads/readme.txt"), "Download").unwrap();
+    fs::write(
+        root.join("content/index.md"),
+        "# Home\n\n[Download](/downloads/readme.txt)",
+    )
+    .unwrap();
+    build(&root).unwrap();
+    assert_eq!(
+        fs::read_to_string(root.join("dist/downloads/readme.txt")).unwrap(),
+        "Download"
+    );
+    let html = fs::read_to_string(root.join("dist/index.html")).unwrap();
+    assert!(html.contains("href=\"/docs/downloads/readme.txt\""));
+
+    let mut unsafe_paths = vec!["downloads/.private/notes.txt", "downloads/read#me.txt"];
+    if cfg!(unix) {
+        unsafe_paths.push("downloads/read\\me.txt");
+    }
+    for relative in unsafe_paths {
+        let path = root.join("public").join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "Unsafe").unwrap();
+        let error = format!("{:#}", check(&root).err().unwrap());
+        assert!(
+            error.contains("unsafe asset filename"),
+            "{relative}: {error}"
+        );
+        fs::remove_file(path).unwrap();
+    }
+}
+
+#[test]
 fn public_assets_are_checked_and_images_have_dimensions() {
     let (_temp, root) = fixture();
     fs::write(
