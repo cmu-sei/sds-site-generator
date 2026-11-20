@@ -300,6 +300,7 @@ test('workflows use direct PR checks, tested release artifacts, and isolated Pag
   assert.equal(workflows.pages.jobs.build.permissions.pages, 'read')
   assert.equal(workflows.pages.jobs.deploy.permissions.pages, 'write')
   assert.equal(workflows.pages.jobs.deploy.permissions['id-token'], 'write')
+  assert.ok(workflows.check.jobs.browser.steps.some(step => step.run === 'npm run test:components' && step['working-directory'] === 'tools'), 'interactive component regressions must block CI')
   const nativeCommands = workflows.check.jobs.native.steps.map(step => step.run)
   const developerBuild = nativeCommands.indexOf('npm run build')
   assert.ok(developerBuild >= 0, 'the native matrix must exercise the developer build command')

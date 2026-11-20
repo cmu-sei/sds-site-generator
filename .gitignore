@@ -1,6 +1,8 @@
 /target/
 /docs-site/dist/
 /docs-site/.tmp*/
+/docs-site/.site-generator-build-*/
+/docs-site/.site-generator.lock
 /cert-example/
 /bin/
 /native/

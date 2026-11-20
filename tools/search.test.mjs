@@ -24,6 +24,7 @@ const { search, tokenize, parseQuery } = await import("../assets/search-worker.j
 before(async () => {
   const binary = process.env.SITE_GENERATOR_BINARY || fileURLToPath(new URL(`../target/debug/sds-site-generator${process.platform === "win32" ? ".exe" : ""}`, import.meta.url));
   execFileSync(binary, ["new", site, "--url", "https://example.org/demo/"], { stdio: "pipe" });
+  await fs.writeFile(join(site, "content/search-fixture.md"), "# Search fixture\n\nMarkdown files are searchable.\n");
   execFileSync(binary, ["build", site], { stdio: "pipe" });
   await fs.access(fileURLToPath(new URL("manifest.json", index)));
 });
@@ -55,7 +56,7 @@ test("phrases require adjacent terms in the correct order", async () => {
 });
 
 test("AND queries and no-results cases", async () => {
-  assert.ok((await search("Markdown files")).total > 0);
+  assert.equal((await search("Markdown files")).total, 1);
   assert.equal((await search("Markdown zzznotaword")).total, 0);
   assert.deepEqual(await search(""), { results: [], total: 0 });
   assert.deepEqual(await search("!!!"), { results: [], total: 0 });

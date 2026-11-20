@@ -31,7 +31,7 @@ try {
       assert.equal(await page.locator(".sds-sei-wordmark").count(), 2);
       assert.equal(await page.locator(".sds-app-footer-content").count(), 1);
       if (width === 1440) {
-        await page.locator("#site-sidebar").waitFor({ state: "visible" });
+        await page.locator("#site-sidebar").waitFor({ state: route.startsWith("guides/") ? "visible" : "hidden" });
         await page.locator(".sds-app-header > .sds-app-navigation").waitFor({ state: "visible" });
         await page.getByRole("button", { name: "Open site navigation" }).waitFor({ state: "hidden" });
       }

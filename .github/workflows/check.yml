@@ -160,6 +160,8 @@ jobs:
         working-directory: tools
       - run: npm run test:highlight
         working-directory: tools
+      - run: npm run test:components
+        working-directory: tools
       - name: Audit generated site
         shell: bash
         run: |

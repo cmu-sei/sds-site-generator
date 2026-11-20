@@ -10,6 +10,321 @@ fn fixture() -> (TempDir, std::path::PathBuf) {
     (temp, root)
 }
 
+fn abandoned_workspace(root: &std::path::Path, name: &str) -> std::path::PathBuf {
+    let path = root.join(format!(".site-generator-build-{name}"));
+    fs::create_dir(&path).unwrap();
+    fs::write(
+        path.join(".site-generator-workspace"),
+        "site-generator workspace v1\n",
+    )
+    .unwrap();
+    path
+}
+
+#[test]
+fn build_cleans_owned_abandoned_workspaces_and_leaves_unknown_directories_alone() {
+    let (_temp, root) = fixture();
+    let owned = abandoned_workspace(&root, "abandoned");
+    fs::create_dir(owned.join("output")).unwrap();
+    fs::write(owned.join("output/partial.html"), "partial build").unwrap();
+    for name in [
+        ".tmp-authored",
+        ".site-generator-build-unmarked",
+        ".site-generator-build-foreign",
+    ] {
+        fs::create_dir(root.join(name)).unwrap();
+        fs::write(root.join(name).join("important.txt"), "keep").unwrap();
+    }
+    fs::write(
+        root.join(".site-generator-build-foreign/.site-generator-workspace"),
+        b"\xff",
+    )
+    .unwrap();
+
+    let report = build(&root).unwrap();
+
+    assert!(report.warnings.is_empty());
+    assert!(!owned.exists());
+    for name in [
+        ".tmp-authored",
+        ".site-generator-build-unmarked",
+        ".site-generator-build-foreign",
+    ] {
+        assert_eq!(
+            fs::read_to_string(root.join(name).join("important.txt")).unwrap(),
+            "keep"
+        );
+    }
+    let mut workspaces: Vec<_> = fs::read_dir(&root)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .filter(|name| name.to_string_lossy().starts_with(".site-generator-build-"))
+        .collect();
+    workspaces.sort();
+    assert_eq!(
+        workspaces,
+        [
+            ".site-generator-build-foreign",
+            ".site-generator-build-unmarked"
+        ]
+    );
+}
+
+#[test]
+fn build_preserves_recovery_until_a_complete_published_build_exists() {
+    for incomplete in [false, true] {
+        let (_temp, root) = fixture();
+        build(&root).unwrap();
+        let before = fs::read(root.join("dist/index.html")).unwrap();
+        let workspace = abandoned_workspace(&root, "recovery");
+        let previous = workspace.join("previous");
+        fs::rename(root.join("dist"), &previous).unwrap();
+        if incomplete {
+            fs::create_dir(root.join("dist")).unwrap();
+            fs::write(
+                root.join("dist/.site-generator-output"),
+                "site-generator v1\n",
+            )
+            .unwrap();
+        }
+        fs::write(
+            root.join("content/broken.md"),
+            "# Broken\n\n[Missing](missing.md)",
+        )
+        .unwrap();
+        let error = format!("{:#}", build(&root).err().unwrap());
+        assert!(error.contains("content/broken.md"), "{error}");
+        assert!(error.contains(&previous.display().to_string()), "{error}");
+        assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
+        fs::remove_file(root.join("content/broken.md")).unwrap();
+
+        let report = build(&root).unwrap();
+
+        assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|warning| warning.message.contains(&previous.display().to_string()))
+        );
+        assert!(root.join("dist/index.html").is_file());
+        let report = build(&root).unwrap();
+        assert!(!workspace.exists());
+        assert!(report.warnings.is_empty());
+    }
+}
+
+#[test]
+fn failed_build_never_discards_recovery_based_on_existing_output_markers() {
+    let (_temp, root) = fixture();
+    build(&root).unwrap();
+    let before = fs::read(root.join("dist/index.html")).unwrap();
+    let workspace = abandoned_workspace(&root, "incomplete-live-output");
+    let previous = workspace.join("previous");
+    fs::rename(root.join("dist"), &previous).unwrap();
+    build(&root).unwrap();
+    fs::remove_file(root.join("dist/index.html")).unwrap();
+    fs::write(
+        root.join("content/broken.md"),
+        "# Broken\n\n[Missing](missing.md)",
+    )
+    .unwrap();
+
+    let error = format!("{:#}", build(&root).err().unwrap());
+
+    assert!(error.contains("content/broken.md"), "{error}");
+    assert!(error.contains(&previous.display().to_string()), "{error}");
+    assert_eq!(fs::read(previous.join("index.html")).unwrap(), before);
+    fs::remove_file(root.join("content/broken.md")).unwrap();
+    build(&root).unwrap();
+    assert_eq!(fs::read(root.join("dist/index.html")).unwrap(), before);
+    assert!(!workspace.exists());
+}
+
+#[test]
+fn build_preserves_unrecognized_backup_files_even_with_valid_published_output() {
+    let (_temp, root) = fixture();
+    build(&root).unwrap();
+    let workspace = abandoned_workspace(&root, "unknown-backup");
+    fs::create_dir(workspace.join("previous")).unwrap();
+    let important = workspace.join("previous/important.txt");
+    fs::write(&important, "keep").unwrap();
+    fs::write(workspace.join("previous/.site-generator-output"), b"\xff").unwrap();
+
+    let report = build(&root).unwrap();
+
+    assert_eq!(fs::read_to_string(important).unwrap(), "keep");
+    assert!(
+        report
+            .warnings
+            .iter()
+            .any(|warning| warning.message.contains("backup is unrecognized"))
+    );
+}
+
+#[test]
+fn build_waits_for_the_site_lock_before_cleanup_or_publication() {
+    use std::sync::mpsc::{RecvTimeoutError, channel};
+    use std::time::Duration;
+
+    let (_temp, root) = fixture();
+    build(&root).unwrap();
+    let before = fs::read(root.join("dist/index.html")).unwrap();
+    let workspace = abandoned_workspace(&root, "waiting");
+    fs::write(
+        root.join("content/revision.md"),
+        "# New revision\n\nUpdated documentation.",
+    )
+    .unwrap();
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(root.join(".site-generator.lock"))
+        .unwrap();
+    lock.lock().unwrap();
+    let (sender, receiver) = channel();
+    let site = root.clone();
+    let thread = std::thread::spawn(move || sender.send(build(&site)).unwrap());
+    let early = receiver.recv_timeout(Duration::from_millis(300));
+    let waited = matches!(&early, Err(RecvTimeoutError::Timeout));
+    let retained_workspace = workspace.exists();
+    let during = fs::read(root.join("dist/index.html")).unwrap();
+    drop(lock);
+    let result = match early {
+        Ok(result) => result,
+        Err(RecvTimeoutError::Timeout) => receiver.recv_timeout(Duration::from_secs(30)).unwrap(),
+        Err(error) => panic!("Build worker failed: {error}"),
+    };
+    thread.join().unwrap();
+    result.unwrap();
+
+    assert!(
+        waited,
+        "A build must not finish while another build holds the lock"
+    );
+    assert!(retained_workspace, "Cleanup must wait for the active build");
+    assert_eq!(before, during);
+    assert!(!workspace.exists());
+    assert!(root.join("dist/revision/index.html").is_file());
+}
+
+#[cfg(unix)]
+#[test]
+fn build_cleanup_does_not_follow_workspace_marker_or_backup_symlinks() {
+    use std::os::unix::fs::symlink;
+
+    let (temp, root) = fixture();
+    build(&root).unwrap();
+    let outside = temp.path().join("outside");
+    fs::create_dir(&outside).unwrap();
+    fs::write(
+        outside.join(".site-generator-workspace"),
+        "site-generator workspace v1\n",
+    )
+    .unwrap();
+    fs::write(outside.join("important.txt"), "keep").unwrap();
+    let link = root.join(".site-generator-build-linked");
+    symlink(&outside, &link).unwrap();
+    let marker_link = root.join(".site-generator-build-linked-marker");
+    fs::create_dir(&marker_link).unwrap();
+    symlink(
+        outside.join(".site-generator-workspace"),
+        marker_link.join(".site-generator-workspace"),
+    )
+    .unwrap();
+    let backup_link = abandoned_workspace(&root, "linked-backup");
+    symlink(&outside, backup_link.join("previous")).unwrap();
+
+    let report = build(&root).unwrap();
+
+    assert_eq!(
+        fs::read_to_string(outside.join("important.txt")).unwrap(),
+        "keep"
+    );
+    assert!(link.symlink_metadata().unwrap().file_type().is_symlink());
+    assert!(marker_link.exists());
+    assert!(backup_link.exists());
+    assert!(!report.warnings.is_empty());
+    fs::remove_file(root.join(".site-generator.lock")).unwrap();
+    symlink(
+        outside.join("important.txt"),
+        root.join(".site-generator.lock"),
+    )
+    .unwrap();
+    let error = format!("{:#}", build(&root).err().unwrap());
+    assert!(error.contains("Build lock"), "{error}");
+    assert_eq!(
+        fs::read_to_string(outside.join("important.txt")).unwrap(),
+        "keep"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn build_reports_cleanup_permission_failures_and_retries_later() {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    let (_temp, root) = fixture();
+    if fs::metadata(&root).unwrap().uid() == 0 {
+        eprintln!("Permission-denial test is not applicable to a root-owned fixture.");
+        return;
+    }
+    build(&root).unwrap();
+    let before = fs::read(root.join("dist/index.html")).unwrap();
+    let workspace = abandoned_workspace(&root, "readonly");
+    let staging = workspace.join("output");
+    fs::create_dir(&staging).unwrap();
+    fs::write(staging.join("partial.html"), "partial build").unwrap();
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o500)).unwrap();
+
+    let result = build(&root);
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o700)).unwrap();
+
+    let error = format!("{:#}", result.err().unwrap());
+    assert!(error.contains("Clean generator workspace"), "{error}");
+    assert!(error.contains(&workspace.display().to_string()), "{error}");
+    assert!(workspace.join(".site-generator-workspace").is_file());
+    assert_eq!(before, fs::read(root.join("dist/index.html")).unwrap());
+    build(&root).unwrap();
+    assert!(!workspace.exists());
+}
+
+#[test]
+#[cfg(unix)]
+fn recovery_cleanup_errors_report_that_fresh_output_was_published_and_retry() {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    let (_temp, root) = fixture();
+    if fs::metadata(&root).unwrap().uid() == 0 {
+        eprintln!("Permission-denial test is not applicable to a root-owned fixture.");
+        return;
+    }
+    build(&root).unwrap();
+    let workspace = abandoned_workspace(&root, "recovery-cleanup-error");
+    fs::rename(root.join("dist"), workspace.join("previous")).unwrap();
+    build(&root).unwrap();
+    let staging = workspace.join("output");
+    fs::create_dir(&staging).unwrap();
+    fs::write(staging.join("partial.html"), "partial build").unwrap();
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o500)).unwrap();
+    fs::write(
+        root.join("content/revision.md"),
+        "# Revision\n\nFresh output must survive recovery cleanup errors.",
+    )
+    .unwrap();
+
+    let result = build(&root);
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o700)).unwrap();
+
+    let error = format!("{:#}", result.err().unwrap());
+    assert!(error.contains("build was published"), "{error}");
+    assert!(error.contains(&workspace.display().to_string()), "{error}");
+    assert!(workspace.join(".site-generator-workspace").is_file());
+    assert!(root.join("dist/revision/index.html").is_file());
+    build(&root).unwrap();
+    assert!(!workspace.exists());
+}
+
 #[test]
 fn highlighting_is_requested_only_by_pages_with_code_examples() {
     let (_temp, root) = fixture();
@@ -490,8 +805,11 @@ fn configured_empty_navigation_hides_only_the_primary_menu() {
 #[test]
 fn checks_do_not_write_output_and_failed_builds_preserve_previous_output() {
     let (_temp, root) = fixture();
+    let workspace = abandoned_workspace(&root, "check-only");
     check(&root).unwrap();
     assert!(!root.join("dist").exists());
+    assert!(!root.join(".site-generator.lock").exists());
+    assert!(workspace.exists());
     build(&root).unwrap();
     let before = fs::read(root.join("dist/index.html")).unwrap();
     fs::write(
@@ -502,6 +820,13 @@ fn checks_do_not_write_output_and_failed_builds_preserve_previous_output() {
     let error = format!("{:#}", build(&root).err().unwrap());
     assert!(error.contains("content/broken.md:3"), "{error}");
     assert_eq!(before, fs::read(root.join("dist/index.html")).unwrap());
+    assert!(fs::read_dir(&root).unwrap().all(|entry| {
+        !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".site-generator-build-")
+    }));
 }
 
 #[test]

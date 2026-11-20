@@ -287,7 +287,7 @@ Plain fenced code.
       margin: pre.margin, codeFont: code.fontSize, codeLine: code.lineHeight,
       border: getComputedStyle(element).borderWidth, radius: getComputedStyle(element).borderRadius };
   }), { preFont: "16px", preLine: "24px", padding: "16px", margin: "16px 0px",
-    codeFont: "14px", codeLine: "21px", border: "1px", radius: "8px" });
+    codeFont: "16px", codeLine: "24px", border: "1px", radius: "8px" });
   assert.deepEqual(await block.evaluate(element => {
     const body = document.body;
     const app = document.querySelector(".sds-app");
@@ -451,8 +451,9 @@ Plain fenced code.
   await page.keyboard.press("Escape");
   const noScript = await browser.newPage({ javaScriptEnabled: false });
   await noScript.goto(url);
-  assert.equal(await noScript.locator(".sds-app-toc a[href^='#']").count(), 10);
-  assert.equal(await noScript.getByRole("link", { name: "Implementation details", exact: true }).count(), 1);
+  assert.equal(await noScript.locator(".sds-app-toc a[href^='#']").count(), 8);
+  assert.equal(await noScript.getByRole("link", { name: "Implementation details", exact: true }).count(), 0);
+  assert.equal(await noScript.getByRole("heading", { name: "Implementation details", exact: true }).isVisible(), true);
   const nativeDropdown = noScript.locator(".sds-app-header sds-dropdown").first();
   await nativeDropdown.locator("button").click();
   assert.equal(await nativeDropdown.locator("menu").isVisible(), true);

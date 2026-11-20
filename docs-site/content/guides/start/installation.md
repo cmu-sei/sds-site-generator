@@ -125,7 +125,7 @@ for files to commit and ignore.
 
 ## Build from source
 
-With stable Rust installed, run this from a local source checkout:
+With stable Rust 1.89 or newer installed, run this from a local source checkout:
 
 ::code-block
 ```sh

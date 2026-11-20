@@ -47,15 +47,25 @@ fn cli_preview_serves_watches_and_preserves_a_good_build() {
     let temporary = tempfile::tempdir().unwrap();
     let root = temporary.path().join("docs");
     site_generator::create(&root, "Preview test", "https://example.org/demo/").unwrap();
+    let workspace = root.join(".site-generator-build-recovery");
+    let recovery = workspace.join("previous");
+    fs::create_dir_all(&recovery).unwrap();
+    fs::write(
+        workspace.join(".site-generator-workspace"),
+        "site-generator workspace v1\n",
+    )
+    .unwrap();
+    fs::write(recovery.join("important.txt"), "keep").unwrap();
     let mut child = Command::new(env!("CARGO_BIN_EXE_sds-site-generator"))
         .arg("preview")
         .arg(&root)
         .args(["--port", "0"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
     let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    let mut stderr = BufReader::new(child.stderr.take().unwrap());
     let mut line = String::new();
     stdout.read_line(&mut line).unwrap();
     assert!(line.starts_with("Built "), "{line}");
@@ -66,6 +76,14 @@ fn cli_preview_serves_watches_and_preserves_a_good_build() {
         child,
         address: format!("{}:{}", url.host_str().unwrap(), url.port().unwrap()),
     };
+    let mut warning = String::new();
+    stderr.read_line(&mut warning).unwrap();
+    assert!(
+        warning.contains(&recovery.canonicalize().unwrap().display().to_string())
+            && warning.contains("Previous-build files are preserved"),
+        "{warning}"
+    );
+    assert!(recovery.join("important.txt").is_file());
 
     let home = request(&preview.address, "GET", "/demo/");
     assert!(home.starts_with("HTTP/1.1 200"));

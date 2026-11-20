@@ -17,7 +17,11 @@ a token-free `.npmrc`:
 ```
 ::
 
-Ignore `dist/` and `node_modules/`. Keep credentials in user configuration or CI secrets.
+Ignore `dist/`, `node_modules/`, `.site-generator-build-*/`, and
+`.site-generator.lock`. Newly created sites include the build ignores.
+See [temporary files and recovery](deployment.md#temporary-files-and-recovery)
+before removing leftover workspaces or older `.tmp*` directories.
+Keep credentials in user configuration or CI secrets.
 [Set up npm](../start/installation.md#optional-npm-installation) with an exact
 generator version and the scripts used below.
 

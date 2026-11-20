@@ -16,8 +16,46 @@ sds-site-generator build .
 
 `check` leaves files unchanged. Builds replace generator-owned `dist/` only after
 successful validation, preserving the last good build on failure.
-Keep hand-authored files elsewhere. Stop preview before building; do not run
-simultaneous builds of one site.
+Keep hand-authored files elsewhere. Builds of the same site run one at a time:
+another build waits and prints a message. Preview rebuilds use the same lock.
+
+## Temporary files and recovery
+
+Builds use `.site-generator-build-*` directories beside `site.toml`. Each has
+an ownership marker, so the next build can safely remove abandoned generator
+workspaces after acquiring the site's lock. Successful builds and ordinary
+failures clean up their own workspaces immediately.
+
+A workspace's `output/` is unfinished staging; `previous/` can contain the last
+published build. If `dist/` is missing or lacks the generator's completion marker
+and expected search/report files, the backup is retained. A fresh build may
+proceed, but the recovery path is recorded in build warnings and
+`dist/_site/diagnostics.json`. Recognized backups become eligible for removal
+on a later build, but are deleted only after that build successfully publishes
+fresh output. Existing output markers alone never authorize backup deletion:
+published files may have been removed or damaged. Failed builds leave existing
+recovery backups untouched. Unrecognized backups remain for
+manual inspection, even after a successful build. Copy any recovery material
+you need before removing it.
+
+Unknown directories, symlink targets, and older unmarked `.tmp*` directories are
+never automatically deleted. Inspect old directories before removing them:
+`previous/` may be recovery material, not disposable staging. Cleanup failures
+are reported with the affected path; fix the filesystem permissions or other
+reported cause so a later build can retry.
+
+The persistent `.site-generator.lock` file is normal. The operating system
+releases its lock when a build exits or crashes; the file's presence does not
+mean a build is active. Do not delete it to unblock a running build. Keep the
+lock file and workspaces out of version control, and upload only `dist/` contents.
+
+Use a local filesystem with operating-system file-lock support; unsupported
+locking produces an error. All concurrent builds must use a generator version
+with this locking behavior. Older versions do not participate in the lock.
+This protects against process interruption, not sudden power loss or storage
+corruption. Publishing uses two directory renames, so `dist/` can briefly be
+absent during replacement; use your host's atomic deployment mechanism for a
+live production website.
 
 ## What to upload
 

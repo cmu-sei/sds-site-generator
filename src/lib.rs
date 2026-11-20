@@ -1,3 +1,4 @@
+mod build_workspace;
 mod config;
 mod content;
 mod markup;
@@ -5,7 +6,8 @@ mod preview;
 mod render;
 mod search;
 
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Context, Result, ensure};
+use build_workspace::BuildWorkspace;
 use config::Config;
 use content::Site;
 use std::fs;
@@ -58,7 +60,10 @@ pub fn create(directory: &Path, name: &str, url: &str) -> Result<()> {
         staging.join("content/guides/publishing.md"),
         include_str!("../starter/publishing.md"),
     )?;
-    fs::write(staging.join(".gitignore"), "/dist/\n/.tmp*/\n")?;
+    fs::write(
+        staging.join(".gitignore"),
+        "/dist/\n/.tmp*/\n/.site-generator-build-*/\n/.site-generator.lock\n",
+    )?;
     fs::write(
         staging.join("README.md"),
         include_str!("../starter/README.md"),
@@ -80,22 +85,18 @@ pub fn build(directory: &Path) -> Result<BuildReport> {
     let root = directory
         .canonicalize()
         .with_context(|| format!("Open {}", directory.display()))?;
-    let site = Site::load(&root)?;
+    let mut workspace = BuildWorkspace::new(&root)?;
+    let result = write_build(&root, &mut workspace);
+    workspace.finish(result)
+}
+
+fn write_build(root: &Path, workspace: &mut BuildWorkspace) -> Result<BuildReport> {
+    let mut site = Site::load(root)?;
+    site.diagnostics.extend_from_slice(workspace.warnings());
     let output = root.join("dist");
-    if output.symlink_metadata().is_ok() {
-        ensure!(
-            !output.symlink_metadata()?.file_type().is_symlink()
-                && output.is_dir()
-                && output.join(".site-generator-output").is_file(),
-            "Refusing to replace {}: it is not an output directory created by this generator.",
-            output.display()
-        );
-    }
-    let temporary = tempfile::tempdir_in(&root)?;
-    let staging = temporary.path().join("output");
-    fs::create_dir(&staging)?;
-    render::write(&site, &staging)?;
-    search::write(&site, &staging)?;
+    let staging = workspace.staging();
+    render::write(&site, staging)?;
+    search::write(&site, staging)?;
     for (relative, asset) in &site.assets {
         let destination = staging.join(relative);
         ensure!(
@@ -116,11 +117,7 @@ pub fn build(directory: &Path) -> Result<BuildReport> {
         staging.join("_site/diagnostics.json"),
         serde_json::to_vec_pretty(&site.diagnostics)?,
     )?;
-    fs::write(
-        staging.join(".site-generator-output"),
-        "site-generator v1\n",
-    )?;
-    for path in content::files(&staging)? {
+    for path in content::files(staging)? {
         if matches!(
             path.extension().and_then(|s| s.to_str()),
             Some("html" | "css" | "js" | "json" | "xml" | "svg" | "txt")
@@ -143,22 +140,7 @@ pub fn build(directory: &Path) -> Result<BuildReport> {
             fs::write(destination, compressed)?;
         }
     }
-    let previous = temporary.path().join("previous");
-    if output.exists() {
-        fs::rename(&output, &previous).context("Move previous build aside")?;
-    }
-    if let Err(error) = fs::rename(&staging, &output) {
-        if previous.exists()
-            && let Err(restore_error) = fs::rename(&previous, &output)
-        {
-            let recovery = temporary.keep().join("previous");
-            bail!(
-                "Publishing failed: {error}. Restoring the previous build also failed: {restore_error}. The previous build is preserved at {}.",
-                recovery.display()
-            );
-        }
-        bail!("Could not publish the build: {error}");
-    }
+    workspace.publish()?;
     Ok(BuildReport {
         pages: site.pages.len(),
         output,

@@ -11,13 +11,7 @@ use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 pub fn preview(directory: &Path, port: u16) -> Result<()> {
     let root = directory.canonicalize()?;
     let report = build(&root)?;
-    if !report.warnings.is_empty() {
-        eprintln!(
-            "{} compatibility warnings. Full report: {}",
-            report.warnings.len(),
-            report.output.join("_site/diagnostics.json").display()
-        );
-    }
+    print_warnings(&report);
     let server = Server::http(("127.0.0.1", port))
         .map_err(|error| anyhow::anyhow!("Could not start preview: {error}"))?;
     let address = server.server_addr().to_string();
@@ -39,13 +33,7 @@ pub fn preview(directory: &Path, port: u16) -> Result<()> {
                     fingerprint = next;
                     match build(&root) {
                         Ok(report) => {
-                            if !report.warnings.is_empty() {
-                                eprintln!(
-                                    "{} compatibility warnings. Full report: {}",
-                                    report.warnings.len(),
-                                    report.output.join("_site/diagnostics.json").display()
-                                );
-                            }
+                            print_warnings(&report);
                             config = Config::load(&root)?;
                             last_error.clear();
                             println!(
@@ -80,6 +68,22 @@ pub fn preview(directory: &Path, port: u16) -> Result<()> {
         {
             eprintln!("Preview request failed: {error:#}");
         }
+    }
+}
+
+fn print_warnings(report: &crate::BuildReport) {
+    for warning in report.warnings.iter().take(20) {
+        eprintln!(
+            "Warning: {}:{}: {}",
+            warning.file, warning.line, warning.message
+        );
+    }
+    if !report.warnings.is_empty() {
+        eprintln!(
+            "{} build warnings. Full report: {}",
+            report.warnings.len(),
+            report.output.join("_site/diagnostics.json").display()
+        );
     }
 }
 

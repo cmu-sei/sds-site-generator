@@ -40,7 +40,7 @@ cargo clippy --all-targets --locked -- -D warnings
 cargo test --all-targets --locked
 ```
 
-For the npm contributor workflow, install stable Rust and use the Node version
+For the npm contributor workflow, install stable Rust 1.89 or newer and use the Node version
 in `.nvmrc` and npm 12.2.1. After cloning, run:
 
 ```sh
@@ -93,7 +93,8 @@ Cargo removed from `PATH`, and runs the package tests on all six supported
 OS/architecture combinations. It also packages tagged releases and deploys the
 documentation site to Pages.
 
-Optional browser and asset checks live in `tools/`. After installing its
+Browser and asset checks live in `tools/`. CI requires the search, component,
+highlighting, and starter-site browser audits. After installing its
 dependencies with `npm ci --prefix tools`, use
 `npm --prefix tools run <command>`:
 
