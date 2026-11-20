@@ -425,11 +425,11 @@ Plain fenced code.
   assert.ok(Math.abs(backLayout.buttonWidth - backLayout.panelWidth) < 1);
   assert.ok(Math.abs(backLayout.iconX - backLayout.panelX - 16) < 1);
   assert.equal(backLayout.labelGap, 12);
-  assert.deepEqual(await back.evaluate(button => {
+  const backTypography = await back.evaluate(button => {
     const body = document.body;
     const app = document.querySelector(".sds-app");
-    const style = () => {
-      const current = getComputedStyle(button);
+    const style = (element = button) => {
+      const current = getComputedStyle(element);
       return { family: current.fontFamily, weight: current.fontWeight };
     };
     const forge = style();
@@ -438,9 +438,22 @@ Plain fenced code.
     const plaid = style();
     body.dataset.sdsTheme = "forge";
     app.dataset.sdsTheme = "forge";
-    return { forge, plaid };
-  }), { forge: { family: '"Open Sans", ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-serif', weight: "600" },
-    plaid: { family: '"Source Serif", ui-serif, Georgia, Cambria, "Times New Roman", serif', weight: "400" } });
+    // Let the browser normalize platform-specific font aliases in the reference too.
+    const reference = document.createElement("span");
+    body.append(reference);
+    const expectedStyle = (family, weight) => {
+      reference.style.fontFamily = family;
+      reference.style.fontWeight = weight;
+      return style(reference);
+    };
+    const expected = {
+      forge: expectedStyle('"Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', "600"),
+      plaid: expectedStyle('"Source Serif", ui-serif, Georgia, Cambria, "Times New Roman", serif', "400"),
+    };
+    reference.remove();
+    return { actual: { forge, plaid }, expected };
+  });
+  assert.deepEqual(backTypography.actual, backTypography.expected);
   await page.keyboard.press("Escape");
   await page.clock.runFor(300);
   await mobileMenu.waitFor({ state: "hidden" });
