@@ -11,6 +11,11 @@ const root = await mkdtemp(join(tmpdir(), "code-components-"));
 const binary = process.env.SITE_GENERATOR_BINARY || fileURLToPath(new URL(`../target/debug/sds-site-generator${process.platform === "win32" ? ".exe" : ""}`, import.meta.url));
 let preview;
 let browser;
+let context;
+let previewOutput = "";
+const pendingRequests = new Map();
+const failedRequests = [];
+const browserErrors = [];
 try {
   await mkdir(join(root, "content"));
   await writeFile(join(root, "site.toml"), "name = 'Code tests'\nurl = 'https://example.org/test/'\nnavigation = [{ title = 'Examples', children = [{ title = 'Code examples', path = '/' }, { title = 'Parameter validation', path = '/#code-examples' }] }, { title = 'Reference', children = [{ title = 'Examples home', path = '/' }] }, { title = 'More', children = [{ title = 'Nested examples', children = [{ title = 'Nested home', path = '/' }] }] }]\n");
@@ -93,18 +98,33 @@ Plain fenced code.
 `);
   preview = spawn(binary, ["preview", root, "--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
   const url = await new Promise((resolveReady, reject) => {
-    let output = "";
     preview.stdout.on("data", (chunk) => {
-      output += chunk;
-      const match = output.match(/Preview: (http:\/\/[^\s]+)/);
+      previewOutput += chunk;
+      const match = previewOutput.match(/Preview: (http:\/\/[^\s]+)/);
       if (match) resolveReady(match[1]);
     });
-    preview.stderr.on("data", (chunk) => { output += chunk; });
+    preview.stderr.on("data", (chunk) => { previewOutput += chunk; });
     preview.on("error", reject);
-    preview.on("exit", (code) => reject(new Error(`Preview exited ${code}: ${output}`)));
+    preview.on("exit", (code) => reject(new Error(`Preview exited ${code}: ${previewOutput}`)));
   });
   browser = await chromium.launch({ executablePath: process.env.CHROME_PATH });
-  const context = await browser.newContext();
+  context = await browser.newContext();
+  await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+  context.on("request", request => {
+    pendingRequests.set(request, { url: request.url(), type: request.resourceType(), startedAt: new Date().toISOString() });
+  });
+  context.on("response", response => {
+    const request = pendingRequests.get(response.request());
+    if (request) request.status = response.status();
+  });
+  context.on("requestfinished", request => pendingRequests.delete(request));
+  context.on("requestfailed", request => {
+    failedRequests.push({ url: request.url(), error: request.failure()?.errorText });
+    pendingRequests.delete(request);
+  });
+  context.on("page", page => {
+    page.on("pageerror", error => browserErrors.push(error.stack || error.message));
+  });
   await context.addInitScript(() => {
     window.copiedCode = [];
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
@@ -513,6 +533,26 @@ Plain fenced code.
   await mobileOverview.click();
   await childPage.waitForURL(url);
   console.log("SDS recipes passed: callout tones/variants/light/dark/mobile/no-JS, semantic tables and keyboard/numeric sorting with bundled icons, plain fences, scrollspy, dropdown navigation, code controls, highlighting, copying, fullscreen, and visual parity.");
+} catch (error) {
+  const diagnostics = {
+    error: error.stack || String(error),
+    previewOutput,
+    previewExitCode: preview?.exitCode,
+    pages: context?.pages().map(page => page.url()),
+    pendingRequests: [...pendingRequests.values()],
+    failedRequests,
+    browserErrors,
+  };
+  console.error("Component test diagnostics:", JSON.stringify(diagnostics, null, 2));
+  const reports = fileURLToPath(new URL("./reports/", import.meta.url));
+  try {
+    await mkdir(reports, { recursive: true });
+    await writeFile(join(reports, "components-diagnostics.json"), `${JSON.stringify(diagnostics, null, 2)}\n`);
+    await context?.tracing.stop({ path: join(reports, "components-trace.zip") });
+  } catch (diagnosticsError) {
+    console.error("Could not save component test diagnostics:", diagnosticsError);
+  }
+  throw error;
 } finally {
   await browser?.close();
   if (preview && preview.exitCode === null) {
