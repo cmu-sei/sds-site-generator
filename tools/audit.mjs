@@ -4,6 +4,7 @@ import lighthouse from "lighthouse";
 import { launch } from "chrome-launcher";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import { assertLighthouseBudget } from "./lighthouse-budget.mjs";
 
 const origin = process.env.SITE_URL || "http://127.0.0.1:4173/demo/";
 const executablePath = process.env.CHROME_PATH;
@@ -114,20 +115,25 @@ try {
 const chrome = await launch({ chromePath: executablePath, chromeFlags: ["--headless", "--no-sandbox"] });
 try {
   for (const route of ["", "guides/", "guides/publishing/"]) {
-    const result = await lighthouse(new URL(route, origin).href, {
-      port: chrome.port,
-      output: "json",
-      onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
-      formFactor: "mobile",
-      logLevel: "error",
-    });
-    const scores = Object.fromEntries(Object.entries(result.lhr.categories).map(([name, value]) => [name, Math.round(value.score * 100)]));
-    await fs.writeFile(new URL(`${route.replaceAll("/", "-") || "home"}.json`, reports), result.report);
-    console.log(`Lighthouse ${route || "home"}:`, scores);
-    assert.equal(scores.accessibility, 100, "Accessibility score");
-    assert.equal(scores["best-practices"], 100, "Best practices score");
-    assert.equal(scores.seo, 100, "SEO score");
-    assert.ok(scores.performance >= 95, `Performance score ${scores.performance} below regression budget of 95`);
+    const name = route.replaceAll("/", "-") || "home";
+    const measurements = [];
+    for (let sample = 1; sample <= 3; sample++) {
+      const result = await lighthouse(new URL(route, origin).href, {
+        port: chrome.port,
+        output: "json",
+        onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
+        formFactor: "mobile",
+        logLevel: "error",
+      });
+      const scores = Object.fromEntries(Object.entries(result.lhr.categories).map(([name, value]) => [name, Math.round(value.score * 100)]));
+      await fs.writeFile(new URL(`${name}-run-${sample}.json`, reports), result.report);
+      console.log(`Lighthouse ${route || "home"} measurement ${sample}:`, scores);
+      measurements.push({ scores, report: result.report });
+    }
+    const median = [...measurements].sort((a, b) => a.scores.performance - b.scores.performance)[1];
+    await fs.writeFile(new URL(`${name}.json`, reports), median.report);
+    const performance = assertLighthouseBudget(measurements.map(measurement => measurement.scores));
+    console.log(`Lighthouse ${route || "home"} median performance: ${performance}`);
   }
 } finally {
   await chrome.kill();

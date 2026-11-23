@@ -7,7 +7,7 @@
     "test:components": "node --test serve.test.mjs && node components.test.mjs",
     "test:highlight": "node --test highlight.test.mjs",
     "test:search": "node --test search.test.mjs",
-    "audit:site": "node audit.mjs",
+    "audit:site": "node --test lighthouse-budget.test.mjs && node audit.mjs",
     "test:search-ui": "node search-ui.test.mjs",
     "audit:cert": "node audit-cert.mjs"
   },
