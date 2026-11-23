@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import AxeBuilder from "@axe-core/playwright";
+import { serveStatic } from "./serve.mjs";
 
 const { values } = parseArgs({ options: {
   candidate: { type: "string" }, reference: { type: "string" }, output: { type: "string" },
@@ -16,45 +16,11 @@ const home = await fs.readFile(path.join(candidate, "index.html"), "utf8");
 const canonical = home.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
 assert.ok(canonical, "Candidate home must have a canonical URL");
 const prefix = new URL(canonical).pathname;
-const mime = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json",
-  ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg",
-  ".gif": "image/gif", ".ico": "image/x-icon", ".wasm": "application/wasm" };
 const servers = [];
 async function serve(root) {
-  const server = createServer(async (request, response) => {
-    try {
-      const url = new URL(request.url, "http://localhost");
-      if (!url.pathname.startsWith(prefix)) {
-        response.writeHead(404).end("Outside site mount");
-        return;
-      }
-      let filename = path.resolve(root, decodeURIComponent(url.pathname.slice(prefix.length)));
-      if (filename !== root && !filename.startsWith(root + path.sep)) {
-        response.writeHead(403).end("Outside site directory");
-        return;
-      }
-      const stat = await fs.stat(filename);
-      if (stat.isDirectory()) {
-        if (!url.pathname.endsWith("/")) {
-          response.writeHead(301, { location: url.pathname + "/" + url.search }).end();
-          return;
-        }
-        filename = path.join(filename, "index.html");
-      }
-      const data = await fs.readFile(filename);
-      response.writeHead(200, { "content-type": mime[path.extname(filename)] || "application/octet-stream" }).end(data);
-    } catch (error) {
-      if (error.code === "ENOENT" || error.code === "ENOTDIR") {
-        response.writeHead(404).end("Not found");
-      } else {
-        console.error(error);
-        response.writeHead(500).end(String(error));
-      }
-    }
-  });
-  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const { server, url } = await serveStatic(root, prefix);
   servers.push(server);
-  return `http://127.0.0.1:${server.address().port}${prefix}`;
+  return url;
 }
 
 const routes = ["", "sei-cert-c-coding-standard/",

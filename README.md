@@ -112,6 +112,8 @@ dependencies with `npm ci --prefix tools`, use
 
 Browser checks require Chromium; served-site checks also require a running
 site configured with `SITE_URL` where appropriate.
+Component tests and CI browser audits serve built output with a local static
+HTTP fixture. The Rust CLI tests separately cover the file-watching preview server.
 
 SDS Lite assets are pinned and bundled locally. See
 [provenance and update details](vendor/sds-lite/PROVENANCE.md).

@@ -705,12 +705,14 @@ impl Site {
                     continue;
                 }
                 ensure!(
-                    relative
-                        .to_str()
-                        .is_some_and(|s| s.split('/').all(|part| !part.starts_with('.')
-                            && !part
-                                .chars()
-                                .any(|c| c.is_control() || matches!(c, '\\' | ':' | '?' | '#')))),
+                    relative.iter().all(|part| {
+                        part.to_str().is_some_and(|part| {
+                            !part.starts_with('.')
+                                && !part
+                                    .chars()
+                                    .any(|c| c.is_control() || matches!(c, '\\' | ':' | '?' | '#'))
+                        })
+                    }),
                     "{file}: unsafe asset filename."
                 );
                 let mut asset = Asset {

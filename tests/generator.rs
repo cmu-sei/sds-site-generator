@@ -94,19 +94,21 @@ fn build_preserves_recovery_until_a_complete_published_build_exists() {
         .unwrap();
         let error = format!("{:#}", build(&root).err().unwrap());
         assert!(error.contains("content/broken.md"), "{error}");
-        assert!(error.contains(&previous.display().to_string()), "{error}");
+        assert!(
+            error.contains(&previous.canonicalize().unwrap().display().to_string()),
+            "{error}"
+        );
         assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
         fs::remove_file(root.join("content/broken.md")).unwrap();
 
         let report = build(&root).unwrap();
 
         assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|warning| warning.message.contains(&previous.display().to_string()))
-        );
+        assert!(report.warnings.iter().any(|warning| {
+            warning
+                .message
+                .contains(&previous.canonicalize().unwrap().display().to_string())
+        }));
         assert!(root.join("dist/index.html").is_file());
         let report = build(&root).unwrap();
         assert!(!workspace.exists());
@@ -133,7 +135,10 @@ fn failed_build_never_discards_recovery_based_on_existing_output_markers() {
     let error = format!("{:#}", build(&root).err().unwrap());
 
     assert!(error.contains("content/broken.md"), "{error}");
-    assert!(error.contains(&previous.display().to_string()), "{error}");
+    assert!(
+        error.contains(&previous.canonicalize().unwrap().display().to_string()),
+        "{error}"
+    );
     assert_eq!(fs::read(previous.join("index.html")).unwrap(), before);
     fs::remove_file(root.join("content/broken.md")).unwrap();
     build(&root).unwrap();
@@ -894,6 +899,41 @@ fn duplicate_routes_are_rejected() {
     fs::write(root.join("content/1.same.md"), "# First\n\nText.").unwrap();
     fs::write(root.join("content/2.same.md"), "# Second\n\nText.").unwrap();
     assert!(format!("{:#}", check(&root).err().unwrap()).contains("duplicate URL"));
+}
+
+#[test]
+fn nested_public_assets_validate_each_filename_component() {
+    let (_temp, root) = fixture();
+    fs::create_dir_all(root.join("public/downloads")).unwrap();
+    fs::write(root.join("public/downloads/readme.txt"), "Download").unwrap();
+    fs::write(
+        root.join("content/index.md"),
+        "# Home\n\n[Download](/downloads/readme.txt)",
+    )
+    .unwrap();
+    build(&root).unwrap();
+    assert_eq!(
+        fs::read_to_string(root.join("dist/downloads/readme.txt")).unwrap(),
+        "Download"
+    );
+    let html = fs::read_to_string(root.join("dist/index.html")).unwrap();
+    assert!(html.contains("href=\"/docs/downloads/readme.txt\""));
+
+    let mut unsafe_paths = vec!["downloads/.private/notes.txt", "downloads/read#me.txt"];
+    if cfg!(unix) {
+        unsafe_paths.push("downloads/read\\me.txt");
+    }
+    for relative in unsafe_paths {
+        let path = root.join("public").join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "Unsafe").unwrap();
+        let error = format!("{:#}", check(&root).err().unwrap());
+        assert!(
+            error.contains("unsafe asset filename"),
+            "{relative}: {error}"
+        );
+        fs::remove_file(path).unwrap();
+    }
 }
 
 #[test]

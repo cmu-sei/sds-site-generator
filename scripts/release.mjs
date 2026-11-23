@@ -57,9 +57,9 @@ export function synchronizeVersions(directory, version) {
   const cargoLockFile = readFileSync(join(directory, 'Cargo.lock'), 'utf8')
   const cargoName = parse(cargoFile).package.name
   const update = block => block.replace(/^version = "[^"]+"$/m, `version = "${version}"`)
-  const cargo = cargoFile.replace(/^\[package\]\n[\s\S]*?(?=^\[|(?![\s\S]))/m, update)
+  const cargo = cargoFile.replace(/^\[package\]\r?\n[\s\S]*?(?=^\[|(?![\s\S]))/m, update)
   let matches = 0
-  const cargoLock = cargoLockFile.replace(/^\[\[package\]\]\n[\s\S]*?(?=^\[\[package\]\]|(?![\s\S]))/gm, block => {
+  const cargoLock = cargoLockFile.replace(/^\[\[package\]\]\r?\n[\s\S]*?(?=^\[\[package\]\]|(?![\s\S]))/gm, block => {
     if (parse(block).package[0].name !== cargoName || /^source = /m.test(block)) return block
     matches++
     return update(block)

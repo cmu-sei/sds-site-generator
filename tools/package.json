@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build:highlight": "node build-highlight.mjs",
-    "test:components": "node components.test.mjs",
+    "test:components": "node --test serve.test.mjs && node components.test.mjs",
     "test:highlight": "node --test highlight.test.mjs",
     "test:search": "node --test search.test.mjs",
     "audit:site": "node audit.mjs",

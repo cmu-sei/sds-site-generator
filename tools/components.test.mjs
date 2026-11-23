@@ -1,16 +1,20 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serveStatic } from "./serve.mjs";
 
 const root = await mkdtemp(join(tmpdir(), "code-components-"));
 const binary = process.env.SITE_GENERATOR_BINARY || fileURLToPath(new URL(`../target/debug/sds-site-generator${process.platform === "win32" ? ".exe" : ""}`, import.meta.url));
-let preview;
+let server;
 let browser;
+let context;
+const pendingRequests = new Map();
+const failedRequests = [];
+const browserErrors = [];
 try {
   await mkdir(join(root, "content"));
   await writeFile(join(root, "site.toml"), "name = 'Code tests'\nurl = 'https://example.org/test/'\nnavigation = [{ title = 'Examples', children = [{ title = 'Code examples', path = '/' }, { title = 'Parameter validation', path = '/#code-examples' }] }, { title = 'Reference', children = [{ title = 'Examples home', path = '/' }] }, { title = 'More', children = [{ title = 'Nested examples', children = [{ title = 'Nested home', path = '/' }] }] }]\n");
@@ -91,20 +95,28 @@ Plain fenced code.
 | Alpha | Active | 9.5 |
 | Gamma | Beta | -1 |
 `);
-  preview = spawn(binary, ["preview", root, "--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
-  const url = await new Promise((resolveReady, reject) => {
-    let output = "";
-    preview.stdout.on("data", (chunk) => {
-      output += chunk;
-      const match = output.match(/Preview: (http:\/\/[^\s]+)/);
-      if (match) resolveReady(match[1]);
-    });
-    preview.stderr.on("data", (chunk) => { output += chunk; });
-    preview.on("error", reject);
-    preview.on("exit", (code) => reject(new Error(`Preview exited ${code}: ${output}`)));
-  });
+  execFileSync(binary, ["build", root], { stdio: "inherit" });
+  const fixture = await serveStatic(join(root, "dist"), "/test/");
+  server = fixture.server;
+  const url = fixture.url;
   browser = await chromium.launch({ executablePath: process.env.CHROME_PATH });
-  const context = await browser.newContext();
+  context = await browser.newContext();
+  await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+  context.on("request", request => {
+    pendingRequests.set(request, { url: request.url(), type: request.resourceType(), startedAt: new Date().toISOString() });
+  });
+  context.on("response", response => {
+    const request = pendingRequests.get(response.request());
+    if (request) request.status = response.status();
+  });
+  context.on("requestfinished", request => pendingRequests.delete(request));
+  context.on("requestfailed", request => {
+    failedRequests.push({ url: request.url(), error: request.failure()?.errorText });
+    pendingRequests.delete(request);
+  });
+  context.on("page", page => {
+    page.on("pageerror", error => browserErrors.push(error.stack || error.message));
+  });
   await context.addInitScript(() => {
     window.copiedCode = [];
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
@@ -391,12 +403,15 @@ Plain fenced code.
   assert.equal(await mobileSummary.getAttribute("data-sds-active"), "");
   assert.equal(await mobileSummary.evaluate(element => getComputedStyle(element).borderInlineStartWidth), "4px");
   const rootHomeLink = page.locator("#site-sidebar .sds-app-navigation > ul > li > a").first();
-  const rootTextStart = element => element.evaluate(node => {
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    return range.getBoundingClientRect().left;
-  });
-  assert.ok(Math.abs(await rootTextStart(rootHomeLink) - await rootTextStart(mobileSummary)) < 1);
+  const rootTextStarts = await rootHomeLink.evaluate((home, summary) => {
+    const textStart = node => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      return range.getBoundingClientRect().left;
+    };
+    return { home: textStart(home), summary: textStart(summary) };
+  }, await mobileSummary.elementHandle());
+  assert.ok(Math.abs(rootTextStarts.home - rootTextStarts.summary) < 1, JSON.stringify(rootTextStarts));
   const activeOverview = mobilePanel.locator("a[data-sds-navigation-overview]");
   assert.equal(await activeOverview.getAttribute("aria-current"), "page");
   assert.equal(await activeOverview.evaluate(element => getComputedStyle(element).borderInlineStartColor), "rgb(196, 18, 48)");
@@ -425,11 +440,11 @@ Plain fenced code.
   assert.ok(Math.abs(backLayout.buttonWidth - backLayout.panelWidth) < 1);
   assert.ok(Math.abs(backLayout.iconX - backLayout.panelX - 16) < 1);
   assert.equal(backLayout.labelGap, 12);
-  assert.deepEqual(await back.evaluate(button => {
+  const backTypography = await back.evaluate(button => {
     const body = document.body;
     const app = document.querySelector(".sds-app");
-    const style = () => {
-      const current = getComputedStyle(button);
+    const style = (element = button) => {
+      const current = getComputedStyle(element);
       return { family: current.fontFamily, weight: current.fontWeight };
     };
     const forge = style();
@@ -438,9 +453,22 @@ Plain fenced code.
     const plaid = style();
     body.dataset.sdsTheme = "forge";
     app.dataset.sdsTheme = "forge";
-    return { forge, plaid };
-  }), { forge: { family: '"Open Sans", ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-serif', weight: "600" },
-    plaid: { family: '"Source Serif", ui-serif, Georgia, Cambria, "Times New Roman", serif', weight: "400" } });
+    // Let the browser normalize platform-specific font aliases in the reference too.
+    const reference = document.createElement("span");
+    body.append(reference);
+    const expectedStyle = (family, weight) => {
+      reference.style.fontFamily = family;
+      reference.style.fontWeight = weight;
+      return style(reference);
+    };
+    const expected = {
+      forge: expectedStyle('"Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', "600"),
+      plaid: expectedStyle('"Source Serif", ui-serif, Georgia, Cambria, "Times New Roman", serif', "400"),
+    };
+    reference.remove();
+    return { actual: { forge, plaid }, expected };
+  });
+  assert.deepEqual(backTypography.actual, backTypography.expected);
   await page.keyboard.press("Escape");
   await page.clock.runFor(300);
   await mobileMenu.waitFor({ state: "hidden" });
@@ -500,11 +528,26 @@ Plain fenced code.
   await mobileOverview.click();
   await childPage.waitForURL(url);
   console.log("SDS recipes passed: callout tones/variants/light/dark/mobile/no-JS, semantic tables and keyboard/numeric sorting with bundled icons, plain fences, scrollspy, dropdown navigation, code controls, highlighting, copying, fullscreen, and visual parity.");
+} catch (error) {
+  const diagnostics = {
+    error: error.stack || String(error),
+    pages: context?.pages().map(page => page.url()),
+    pendingRequests: [...pendingRequests.values()],
+    failedRequests,
+    browserErrors,
+  };
+  console.error("Component test diagnostics:", JSON.stringify(diagnostics, null, 2));
+  const reports = fileURLToPath(new URL("./reports/", import.meta.url));
+  try {
+    await mkdir(reports, { recursive: true });
+    await writeFile(join(reports, "components-diagnostics.json"), `${JSON.stringify(diagnostics, null, 2)}\n`);
+    await context?.tracing.stop({ path: join(reports, "components-trace.zip") });
+  } catch (diagnosticsError) {
+    console.error("Could not save component test diagnostics:", diagnosticsError);
+  }
+  throw error;
 } finally {
   await browser?.close();
-  if (preview && preview.exitCode === null) {
-    preview.kill();
-    await once(preview, "exit");
-  }
+  if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   await rm(root, { recursive: true, force: true });
 }
