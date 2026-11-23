@@ -113,7 +113,8 @@ only the temporary request label so the partially published release can resume.
 npm run test:package
 ```
 
-The release tests exercise version synchronization, channel ordering, release
+The release tests exercise version synchronization with LF and CRLF line endings,
+channel ordering, release
 identity, artifact checksums, publication retries, and cancellation safeguards.
 Fixtures model GitHub's distinct PR list/detail responses, paginated run history,
 and races between cancellation and a run finishing.

@@ -24,29 +24,37 @@ test('release versions support first release, sequenced betas, and stable promot
   assert.throws(() => resolveVersion('0.2.0', 'next', '0.1.0', []), /stable or beta/)
 })
 
-test('preparation synchronizes all four manifests without modifying dependencies', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'site-generator-release-'))
-  try {
-    const names = ['package.json', 'package-lock.json', 'Cargo.toml', 'Cargo.lock']
-    for (const name of names) cpSync(join(root, name), join(directory, name))
-    const originalCargo = readFileSync(join(directory, 'Cargo.toml'), 'utf8')
-    const originalLock = parse(readFileSync(join(directory, 'Cargo.lock'), 'utf8'))
-    const originalNpm = JSON.parse(readFileSync(join(directory, 'package-lock.json'), 'utf8'))
-    synchronizeVersions(directory, '0.2.0-beta.1')
-    assert.equal(metadata(directory).version, '0.2.0-beta.1')
-    const cargo = readFileSync(join(directory, 'Cargo.toml'), 'utf8')
-    assert.equal(cargo, originalCargo.replace(`version = "${metadata().version}"`, 'version = "0.2.0-beta.1"'))
-    const lock = parse(readFileSync(join(directory, 'Cargo.lock'), 'utf8'))
-    originalLock.package.find(pkg => pkg.name === 'sds-site-generator' && !pkg.source).version = '0.2.0-beta.1'
-    assert.deepEqual(lock, originalLock)
-    const npm = JSON.parse(readFileSync(join(directory, 'package-lock.json'), 'utf8'))
-    originalNpm.version = '0.2.0-beta.1'
-    originalNpm.packages[''].version = '0.2.0-beta.1'
-    assert.deepEqual(npm, originalNpm)
-  } finally {
-    rmSync(directory, { recursive: true, force: true })
-  }
-})
+for (const [label, newline] of [['LF', '\n'], ['CRLF', '\r\n']]) {
+  test(`preparation synchronizes all four manifests without modifying dependencies (${label})`, () => {
+    const directory = mkdtempSync(join(tmpdir(), 'site-generator-release-'))
+    try {
+      const names = ['package.json', 'package-lock.json', 'Cargo.toml', 'Cargo.lock']
+      for (const name of names) cpSync(join(root, name), join(directory, name))
+      for (const name of ['Cargo.toml', 'Cargo.lock']) {
+        const path = join(directory, name)
+        writeFileSync(path, readFileSync(path, 'utf8').replace(/\r?\n/g, newline))
+      }
+      const originalCargo = readFileSync(join(directory, 'Cargo.toml'), 'utf8')
+      const originalLock = parse(readFileSync(join(directory, 'Cargo.lock'), 'utf8'))
+      const originalNpm = JSON.parse(readFileSync(join(directory, 'package-lock.json'), 'utf8'))
+      synchronizeVersions(directory, '0.2.0-beta.1')
+      assert.equal(metadata(directory).version, '0.2.0-beta.1')
+      const cargo = readFileSync(join(directory, 'Cargo.toml'), 'utf8')
+      assert.equal(cargo, originalCargo.replace(`version = "${metadata().version}"`, 'version = "0.2.0-beta.1"'))
+      const lockText = readFileSync(join(directory, 'Cargo.lock'), 'utf8')
+      assert.equal(lockText, lockText.replace(/\r?\n/g, newline), 'Cargo.lock must retain its line endings')
+      const lock = parse(lockText)
+      originalLock.package.find(pkg => pkg.name === 'sds-site-generator' && !pkg.source).version = '0.2.0-beta.1'
+      assert.deepEqual(lock, originalLock)
+      const npm = JSON.parse(readFileSync(join(directory, 'package-lock.json'), 'utf8'))
+      originalNpm.version = '0.2.0-beta.1'
+      originalNpm.packages[''].version = '0.2.0-beta.1'
+      assert.deepEqual(npm, originalNpm)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+}
 
 test('publication rejects fork, mismatched, unmerged, and cancelled release PRs', () => {
   const pr = {
