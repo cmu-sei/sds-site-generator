@@ -41,6 +41,11 @@ There is no separate `main` push check competing with that release build. A
 feature PR followed by a release therefore needs three full runs: feature PR,
 release PR, and publication build (plus any runs for PR updates).
 
+Browser functionality, accessibility, best practices, and SEO remain release
+gates. Lighthouse performance is advisory: a median below 95 emits an Actions
+warning and retains the measurement reports, but does not block publication
+because shared-runner timing varies.
+
 ## Normal release
 
 1. From `main`, run **Release - Create Release PR** in Actions.
