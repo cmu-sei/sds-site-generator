@@ -181,12 +181,17 @@ jobs:
         shell: bash
         run: |
           target/debug/sds-site-generator new "$RUNNER_TEMP/audit-site" --url https://example.org/demo/
-          target/debug/sds-site-generator preview "$RUNNER_TEMP/audit-site" > "$RUNNER_TEMP/preview.log" 2>&1 &
-          preview_pid=$!
-          trap 'kill "$preview_pid"' EXIT
+          target/debug/sds-site-generator build "$RUNNER_TEMP/audit-site"
+          node --input-type=module - "$RUNNER_TEMP/audit-site/dist" > "$RUNNER_TEMP/static-server.log" 2>&1 <<'NODE' &
+          import { serveStatic } from "./tools/serve.mjs";
+          const { url } = await serveStatic(process.argv[2], "/demo/", 4173);
+          console.log(`Serving ${url}`);
+          NODE
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
           for attempt in {1..30}; do
             if curl --fail --silent http://127.0.0.1:4173/demo/ > /dev/null; then break; fi
-            if [[ "$attempt" == 30 ]]; then cat "$RUNNER_TEMP/preview.log"; exit 1; fi
+            if [[ "$attempt" == 30 ]]; then cat "$RUNNER_TEMP/static-server.log"; exit 1; fi
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:4173/demo/ > /dev/null

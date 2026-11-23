@@ -94,19 +94,21 @@ fn build_preserves_recovery_until_a_complete_published_build_exists() {
         .unwrap();
         let error = format!("{:#}", build(&root).err().unwrap());
         assert!(error.contains("content/broken.md"), "{error}");
-        assert!(error.contains(&previous.display().to_string()), "{error}");
+        assert!(
+            error.contains(&previous.canonicalize().unwrap().display().to_string()),
+            "{error}"
+        );
         assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
         fs::remove_file(root.join("content/broken.md")).unwrap();
 
         let report = build(&root).unwrap();
 
         assert_eq!(before, fs::read(previous.join("index.html")).unwrap());
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|warning| warning.message.contains(&previous.display().to_string()))
-        );
+        assert!(report.warnings.iter().any(|warning| {
+            warning
+                .message
+                .contains(&previous.canonicalize().unwrap().display().to_string())
+        }));
         assert!(root.join("dist/index.html").is_file());
         let report = build(&root).unwrap();
         assert!(!workspace.exists());
@@ -133,7 +135,10 @@ fn failed_build_never_discards_recovery_based_on_existing_output_markers() {
     let error = format!("{:#}", build(&root).err().unwrap());
 
     assert!(error.contains("content/broken.md"), "{error}");
-    assert!(error.contains(&previous.display().to_string()), "{error}");
+    assert!(
+        error.contains(&previous.canonicalize().unwrap().display().to_string()),
+        "{error}"
+    );
     assert_eq!(fs::read(previous.join("index.html")).unwrap(), before);
     fs::remove_file(root.join("content/broken.md")).unwrap();
     build(&root).unwrap();

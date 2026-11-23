@@ -1,18 +1,17 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serveStatic } from "./serve.mjs";
 
 const root = await mkdtemp(join(tmpdir(), "code-components-"));
 const binary = process.env.SITE_GENERATOR_BINARY || fileURLToPath(new URL(`../target/debug/sds-site-generator${process.platform === "win32" ? ".exe" : ""}`, import.meta.url));
-let preview;
+let server;
 let browser;
 let context;
-let previewOutput = "";
 const pendingRequests = new Map();
 const failedRequests = [];
 const browserErrors = [];
@@ -96,17 +95,10 @@ Plain fenced code.
 | Alpha | Active | 9.5 |
 | Gamma | Beta | -1 |
 `);
-  preview = spawn(binary, ["preview", root, "--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
-  const url = await new Promise((resolveReady, reject) => {
-    preview.stdout.on("data", (chunk) => {
-      previewOutput += chunk;
-      const match = previewOutput.match(/Preview: (http:\/\/[^\s]+)/);
-      if (match) resolveReady(match[1]);
-    });
-    preview.stderr.on("data", (chunk) => { previewOutput += chunk; });
-    preview.on("error", reject);
-    preview.on("exit", (code) => reject(new Error(`Preview exited ${code}: ${previewOutput}`)));
-  });
+  execFileSync(binary, ["build", root], { stdio: "inherit" });
+  const fixture = await serveStatic(join(root, "dist"), "/test/");
+  server = fixture.server;
+  const url = fixture.url;
   browser = await chromium.launch({ executablePath: process.env.CHROME_PATH });
   context = await browser.newContext();
   await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
@@ -536,8 +528,6 @@ Plain fenced code.
 } catch (error) {
   const diagnostics = {
     error: error.stack || String(error),
-    previewOutput,
-    previewExitCode: preview?.exitCode,
     pages: context?.pages().map(page => page.url()),
     pendingRequests: [...pendingRequests.values()],
     failedRequests,
@@ -555,9 +545,6 @@ Plain fenced code.
   throw error;
 } finally {
   await browser?.close();
-  if (preview && preview.exitCode === null) {
-    preview.kill();
-    await once(preview, "exit");
-  }
+  if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   await rm(root, { recursive: true, force: true });
 }
