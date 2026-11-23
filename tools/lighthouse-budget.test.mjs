@@ -4,14 +4,19 @@ import { assertLighthouseBudget } from "./lighthouse-budget.mjs";
 
 const scores = performance => ({ performance, accessibility: 100, "best-practices": 100, seo: 100 });
 
-test("one performance outlier does not fail the median budget, regardless of order", () => {
+test("a median at or above the performance target emits no warning, regardless of order", t => {
+  const warning = t.mock.method(console, "warn", () => {});
   for (const values of [[93, 99, 100], [100, 93, 99], [99, 100, 93], [94, 95, 96]]) {
     assert.equal(assertLighthouseBudget(values.map(scores)), [...values].sort((a, b) => a - b)[1]);
   }
+  assert.equal(warning.mock.callCount(), 0);
 });
 
-test("two low performance measurements still fail the unchanged budget", () => {
-  assert.throws(() => assertLighthouseBudget([93, 94, 100].map(scores)), /Median performance score 94 below regression budget of 95/);
+test("sustained low performance warns visibly without blocking publication", t => {
+  const warning = t.mock.method(console, "warn", () => {});
+  assert.equal(assertLighthouseBudget([93, 93, 92].map(scores)), 93);
+  assert.equal(warning.mock.callCount(), 1);
+  assert.match(warning.mock.calls[0].arguments[0], /^::warning title=Lighthouse performance budget::Median performance score 93 below advisory target of 95 \(measurements: 93, 93, 92\)/);
 });
 
 test("every measurement must pass accessibility, best practices, and SEO", () => {

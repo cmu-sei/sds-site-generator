@@ -21,23 +21,36 @@ import ini from "shiki/langs/ini.mjs";
 import light from "shiki/themes/github-light-high-contrast.mjs";
 import dark from "shiki/themes/github-dark-high-contrast.mjs";
 
-const highlighter = await createHighlighterCore({
-  themes: [light, dark],
-  langs: [c, cpp, java, perl, fortran, javascript, typescript, python, shell, html, xml, json, yaml, diff, markdown, toml, powershell, ini],
-  engine: createJavaScriptRegexEngine({ forgiving: true }),
-});
-
+const languages = [c, cpp, java, perl, fortran, javascript, typescript, python, shell, html, xml, json, yaml, diff, markdown, toml, powershell, ini];
+const languageGroups = new Map();
+for (const group of languages) {
+  for (const grammar of group) {
+    for (const name of [grammar.name, ...(grammar.aliases || [])]) {
+      if (!languageGroups.has(name)) languageGroups.set(name, group);
+    }
+  }
+}
 const aliases = { fortran: "fortran-free-form", f: "fortran-free-form", "c++": "cpp", sh: "shellscript", bash: "shellscript", js: "javascript", ts: "typescript" };
+const blocks = [];
 for (const code of document.querySelectorAll("pre > code")) {
   const language = [...code.classList].find((name) => name.startsWith("language-"))?.slice(9);
   const lang = aliases[language] || language;
-  if (!lang || !highlighter.getLoadedLanguages().includes(lang)) continue;
-  const rendered = highlighter.codeToHtml(code.textContent, {
-    lang,
-    themes: { light: "github-light-high-contrast", dark: "github-dark-high-contrast" },
-    defaultColor: false,
+  if (languageGroups.has(lang)) blocks.push({ code, lang });
+}
+if (blocks.length) {
+  const highlighter = await createHighlighterCore({
+    themes: [light, dark],
+    langs: [...new Set(blocks.map(({ lang }) => languageGroups.get(lang)))].flat(),
+    engine: createJavaScriptRegexEngine({ forgiving: true }),
   });
-  const parsed = new DOMParser().parseFromString(rendered, "text/html");
-  code.replaceChildren(...parsed.querySelector("code").childNodes);
-  code.dataset.highlighted = "true";
+  for (const { code, lang } of blocks) {
+    const rendered = highlighter.codeToHtml(code.textContent, {
+      lang,
+      themes: { light: "github-light-high-contrast", dark: "github-dark-high-contrast" },
+      defaultColor: false,
+    });
+    const parsed = new DOMParser().parseFromString(rendered, "text/html");
+    code.replaceChildren(...parsed.querySelector("code").childNodes);
+    code.dataset.highlighted = "true";
+  }
 }

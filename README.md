@@ -114,10 +114,15 @@ Browser checks require Chromium; served-site checks also require a running
 site configured with `SITE_URL` where appropriate.
 Component tests and CI browser audits serve built output with a local static
 HTTP fixture. The Rust CLI tests separately cover the file-watching preview server.
-The Lighthouse performance budget is 95 using the median of three measurements
-per route to reduce sensitivity to shared-runner timing spikes. Accessibility,
-best practices, and SEO must score 100 in every measurement. CI retains all
-three reports and a median-performance report for each route.
+Syntax highlighting initializes only the language grammar groups used on each
+page, including their embedded-language dependencies, instead of compiling every
+supported language during page load.
+The Lighthouse performance target is advisory: a median below 95 across three
+measurements per route emits a visible Actions warning but does not block a PR
+or release. Shared-runner timing is not a reliable publication gate. Functional
+browser checks remain required; accessibility, best practices, and SEO must
+score 100 in every measurement, and invalid audit results still fail. CI retains
+all three reports and a median-performance report for each route.
 
 SDS Lite assets are pinned and bundled locally. See
 [provenance and update details](vendor/sds-lite/PROVENANCE.md).
