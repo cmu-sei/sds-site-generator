@@ -98,6 +98,15 @@ For a failed Pages handoff or deployment, run **Deploy documentation to Pages**
 manually from `main` with the published stable tag. It verifies the tag, package
 integrity, checksums, and current npm `latest` before deployment.
 
+If publication reports an integrity mismatch, do not delete or replace the
+published version. npm 12 returns `npm view --json` results in a single-element
+array; the release scripts accept both that shape and older object responses.
+Older scripts can falsely report a mismatch even after successful publication.
+Rerunning an old publication uses its original release commit, not fixes on
+`main`. If both GitHub and npm publication completed and their package hashes
+match, merge the script fix and use the manual Pages deployment above to finish
+the documentation handoff. The original failed run remains in Actions history.
+
 ## Discarding or cancelling
 
 Run **Recovery - Discard or Cancel Release** from `main`. Enter the exact
@@ -130,5 +139,5 @@ The release tests exercise version synchronization with LF and CRLF line endings
 channel ordering, release
 identity, artifact checksums, publication retries, and cancellation safeguards.
 Fixtures model GitHub's distinct PR list/detail responses, paginated run history,
-and races between cancellation and a run finishing.
+object and array npm responses, and races between cancellation and a run finishing.
 The six-platform and browser builds remain required in GitHub Actions.

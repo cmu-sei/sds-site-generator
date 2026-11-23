@@ -105,7 +105,7 @@ test('release bundles reject missing, extra, and tampered artifacts before publi
   }
 })
 
-test('release lifecycle prepares PRs, resumes publication, verifies Pages, and safely recovers', { skip: process.platform === 'win32' }, async () => {
+for (const npmArrayResponse of [false, true]) test(`release lifecycle prepares PRs, resumes publication, verifies Pages, and safely recovers (npm ${npmArrayResponse ? 'array' : 'object'} responses)`, { skip: process.platform === 'win32' }, async () => {
   const directory = mkdtempSync(join(tmpdir(), 'site-generator-publication-'))
   const stateFile = join(directory, 'state.json')
   const readState = () => JSON.parse(readFileSync(stateFile, 'utf8'))
@@ -264,7 +264,7 @@ test('release lifecycle prepares PRs, resumes publication, verifies Pages, and s
     const files = [tarballName, ...archives].sort()
     writeFileSync(join(bundle, 'SHA256SUMS'), files.map(name =>
       `${createHash('sha256').update(readFileSync(join(bundle, name))).digest('hex')}  ${name}\n`).join(''))
-    const initialState = { release: { id: 1, tag_name: tag, draft: true, prerelease: false, target_commitish: 'main', html_url: `https://github.com/cmu-sei/sds-site-generator/releases/tag/${tag}` }, assets: [], tags: {}, published: null, publishes: 0 }
+    const initialState = { npmArrayResponse, release: { id: 1, tag_name: tag, draft: true, prerelease: false, target_commitish: 'main', html_url: `https://github.com/cmu-sei/sds-site-generator/releases/tag/${tag}` }, assets: [], tags: {}, published: null, publishes: 0 }
     save({ ...initialState, failPublish: true })
     const shim = `
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -279,7 +279,7 @@ if (tool === 'gh') {
   state.assets.push({ name: basename(args[3]), bytes: readFileSync(args[3]).toString('base64') })
 } else if (args[0] === 'view') {
   const value = args.includes('dist-tags') ? state.tags : args[1].endsWith('@${version}') ? state.published : null
-  console.log(JSON.stringify(value ?? { error: { code: 'E404' } }))
+  console.log(JSON.stringify(value ? state.npmArrayResponse ? [value] : value : { error: { code: 'E404' } }))
   if (!value) process.exitCode = 1
 } else if (args[0] === 'publish' && !args.includes('--dry-run')) {
   if (state.failPublish) {
