@@ -295,6 +295,8 @@ test('workflows use direct PR checks, tested release artifacts, and isolated Pag
   const workflows = Object.fromEntries(['check', 'release', 'pages', 'prepare-release', 'recover-release'].map(name => [name, parseYaml(readFileSync(join(root, `.github/workflows/${name}.yml`), 'utf8'))]))
   assert.ok(Object.hasOwn(workflows.check.on, 'pull_request'))
   assert.ok(Object.hasOwn(workflows.check.on, 'workflow_call'))
+  assert.ok(Object.hasOwn(workflows.check.on, 'workflow_dispatch'))
+  assert.deepEqual(workflows.check.on.push.branches, ['hotfix/v*'], 'main merges must not duplicate PR checks or the release build')
   assert.equal(workflows.release.jobs.build.uses, './.github/workflows/check.yml')
   assert.equal(workflows.release.jobs.build.with.commit, '${{ github.event.pull_request.merge_commit_sha }}')
   assert.deepEqual(workflows.release.on.pull_request.types, ['closed'])

@@ -8,7 +8,7 @@ locally, push release tags, publish a draft yourself, or run `npm publish`.
 Before the first release:
 
 1. Keep `main` as the default branch. If renaming it, update the branch filters
-   in the check and release workflows.
+   in the release workflows.
 2. Enable Actions, allow Actions to create pull requests, and permit the
    workflows' declared `GITHUB_TOKEN` permissions. No personal token is needed.
 3. Require **Build and test** and normal review on `main`. Allow the bot to push
@@ -27,6 +27,19 @@ The first package publication uses `GITHUB_TOKEN`; for an existing package,
 grant this repository Actions access to it. Configure package visibility
 separately. Public standalone downloads need a public repository; npm downloads
 still require GitHub Packages authentication.
+
+## Check timing
+
+Feature and release PRs run the full **Check** workflow before merging. Pushes
+to `main` do not start another check run; require PRs and **Build and test** on
+`main` rather than allowing untested direct pushes. Manual checks and checks on
+pushes to `hotfix/v*` remain available.
+
+After a release PR merges, **Automatic - Publish Release** runs the full checks
+once against the exact merged commit and builds the artifacts it will publish.
+There is no separate `main` push check competing with that release build. A
+feature PR followed by a release therefore needs three full runs: feature PR,
+release PR, and publication build (plus any runs for PR updates).
 
 ## Normal release
 

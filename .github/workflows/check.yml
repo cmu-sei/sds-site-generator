@@ -1,7 +1,7 @@
 name: Check
 on:
   push:
-    branches: [main, 'hotfix/v*']
+    branches: ['hotfix/v*']
   pull_request:
   workflow_dispatch:
   workflow_call:
