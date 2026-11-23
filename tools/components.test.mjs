@@ -403,12 +403,15 @@ Plain fenced code.
   assert.equal(await mobileSummary.getAttribute("data-sds-active"), "");
   assert.equal(await mobileSummary.evaluate(element => getComputedStyle(element).borderInlineStartWidth), "4px");
   const rootHomeLink = page.locator("#site-sidebar .sds-app-navigation > ul > li > a").first();
-  const rootTextStart = element => element.evaluate(node => {
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    return range.getBoundingClientRect().left;
-  });
-  assert.ok(Math.abs(await rootTextStart(rootHomeLink) - await rootTextStart(mobileSummary)) < 1);
+  const rootTextStarts = await rootHomeLink.evaluate((home, summary) => {
+    const textStart = node => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      return range.getBoundingClientRect().left;
+    };
+    return { home: textStart(home), summary: textStart(summary) };
+  }, await mobileSummary.elementHandle());
+  assert.ok(Math.abs(rootTextStarts.home - rootTextStarts.summary) < 1, JSON.stringify(rootTextStarts));
   const activeOverview = mobilePanel.locator("a[data-sds-navigation-overview]");
   assert.equal(await activeOverview.getAttribute("aria-current"), "page");
   assert.equal(await activeOverview.evaluate(element => getComputedStyle(element).borderInlineStartColor), "rgb(196, 18, 48)");
