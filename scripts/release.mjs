@@ -124,6 +124,10 @@ function npmView(spec, field) {
     if (data.error?.code === 'E404') return null
     throw new Error(`npm view failed: ${result.stderr || result.stdout}`)
   }
+  if (Array.isArray(data)) {
+    if (data.length !== 1) throw new Error(`Expected one npm view result for ${spec}, received ${data.length}.`)
+    return data[0]
+  }
   return data
 }
 
