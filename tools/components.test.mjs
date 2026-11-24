@@ -94,6 +94,10 @@ Plain fenced code.
 | Beta | Active | 9.12 |
 | Alpha | Active | 9.5 |
 | Gamma | Beta | -1 |
+
+Table reference details.
+
+Additional reference notes.
 `);
   execFileSync(binary, ["build", root], { stdio: "inherit" });
   const fixture = await serveStatic(join(root, "dist"), "/test/");
@@ -133,10 +137,35 @@ Plain fenced code.
     for (const width of [1280, 390]) {
       await components.setViewportSize({ width, height: 900 });
       await components.goto(`${url}components/`);
+      const skip = components.getByRole("link", { name: "Skip to main content", exact: true });
+      await skip.focus();
+      await skip.press("Enter");
+      assert.equal(await components.locator("#site-main").evaluate(element => document.activeElement === element), true);
+      assert.equal(await components.locator("#site-main").evaluate(element => getComputedStyle(element).outlineStyle), "none");
       const table = components.locator("article table");
       const score = table.getByRole("button", { name: "Sort by Score", exact: true });
       await score.waitFor({ state: "visible" });
       assert.equal(await table.getAttribute("class"), "sds-table");
+      assert.deepEqual(await table.evaluate(element => {
+        const style = getComputedStyle(element);
+        return [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth];
+      }), ["0px", "0px", "0px", "0px"]);
+      const cellInsets = await table.locator("th, td").evaluateAll(cells => cells.map(cell => {
+        const style = getComputedStyle(cell);
+        return [style.paddingInlineStart, style.paddingInlineEnd];
+      }));
+      for (const insets of cellInsets) assert.deepEqual(insets, ["12px", "12px"]);
+      assert.equal(await table.locator("tbody tr:first-child td").first().evaluate(cell => getComputedStyle(cell).borderBottomWidth), "1px");
+      const gaps = await table.evaluate(element => {
+        const wrapper = element.closest(".sds-table-container");
+        const following = wrapper.nextElementSibling;
+        return [
+          wrapper.getBoundingClientRect().top - wrapper.previousElementSibling.getBoundingClientRect().bottom,
+          following.getBoundingClientRect().top - wrapper.getBoundingClientRect().bottom,
+          following.nextElementSibling.getBoundingClientRect().top - following.getBoundingClientRect().bottom,
+        ];
+      });
+      for (const gap of gaps) assert.ok(gap >= 16, `Expected at least 16px of content separation, got ${gap}px`);
       assert.equal(await table.locator("th button svg[data-sds-sort-chevron][aria-hidden='true']").count(), 3);
       const headerStyles = await table.locator("th").evaluateAll(headers => headers.map(header => {
         const cell = getComputedStyle(header);
