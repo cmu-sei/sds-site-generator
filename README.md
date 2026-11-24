@@ -114,6 +114,10 @@ Browser checks require Chromium; served-site checks also require a running
 site configured with `SITE_URL` where appropriate.
 Component tests and CI browser audits serve built output with a local static
 HTTP fixture. The Rust CLI tests separately cover the file-watching preview server.
+Component tests also check generated table cell insets, outer-border removal,
+and preserved row separators in light/dark mode at desktop and mobile widths.
+They verify content spacing and that skip navigation focuses the main content
+without outlining the reading region.
 Syntax highlighting initializes only the language grammar groups used on each
 page, including their embedded-language dependencies, instead of compiling every
 supported language during page load.

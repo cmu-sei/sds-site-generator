@@ -1,21 +1,21 @@
 # Bundled SDS Lite
 
 - Upstream: https://github.com/cmu-sei/sds-lite
-- Release: [v0.8.0](https://github.com/cmu-sei/sds-lite/releases/tag/v0.8.0),
-  published 2026-11-12.
-- Source commit: `981b058e6a7d3c412bfe49b2225b6d73af09a950`.
-- Verified against the latest stable release: 2026-11-20.
+- Release: [v0.9.0](https://github.com/cmu-sei/sds-lite/releases/tag/v0.9.0),
+  published 2026-11-24.
+- Source commit: `ab7f0cecd096708acd52bcb6da789a3ac67b915e`.
+- Verified against the latest stable release: 2026-11-24.
 - Source archive:
-  https://codeload.github.com/cmu-sei/sds-lite/tar.gz/981b058e6a7d3c412bfe49b2225b6d73af09a950
+  https://codeload.github.com/cmu-sei/sds-lite/tar.gz/ab7f0cecd096708acd52bcb6da789a3ac67b915e
 - Source archive SHA-256:
-  `fca80cf4349014a723b468e611464aaebb0b67337116af0b39bbf2b880d1dc86`.
+  `85b745ff8eca42fb47d6e17ed3f209e4a928d61fb57f37f787ee8707af6201e3`.
 - License: see [LICENSE](LICENSE). Generated sites continue to bundle the
   required design-system license files.
 
-All eight bundled files are byte-for-byte identical to the files in this
-release's source archive. The existing development snapshot already matched
-v0.8.0; verifying the released files replaced its local-build provenance
-without changing asset bytes or behavior. There are no local patches.
+All eight bundled files are byte-for-byte identical to this release's source
+archive. The previous local testing snapshot already matched v0.9.0; replacing
+it with the verified release files changed provenance without changing asset
+bytes or behavior. No local patches are applied.
 
 ## Source files
 
