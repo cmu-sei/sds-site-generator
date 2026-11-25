@@ -405,6 +405,16 @@ fn starter_builds_complete_portable_site() {
         );
         assert!(document.select_first("#site-query[autofocus]").is_err());
         assert!(
+            document
+                .select_first("#site-search-title.sds-text-title")
+                .is_ok()
+        );
+        assert!(
+            document
+                .select_first(".sds-app-masthead sds-tooltip > [data-search-open]:not([title])")
+                .is_ok()
+        );
+        assert!(
             document.select_first("#site-sidebar footer").is_err(),
             "Unexpected sidebar footer in {route}"
         );
@@ -512,6 +522,15 @@ fn starter_builds_complete_portable_site() {
             .select_first(".sds-app-pagination a[rel='prev'][href='/docs/guides/']")
             .is_ok()
     );
+    for (document, relation) in [(&publishing_document, "prev"), (&guides_document, "next")] {
+        assert!(
+            document
+                .select_first(&format!(
+                    ".sds-app-pagination a.sds-button[data-sds-density='compact'][data-sds-variant='text'][data-sds-tone='neutral'][rel='{relation}']"
+                ))
+                .is_ok()
+        );
+    }
     assert!(!home.contains("_site/components.js"));
     assert!(!root.join("dist/_site/components.js").exists());
     assert!(!home.contains("cdn.jsdelivr"));

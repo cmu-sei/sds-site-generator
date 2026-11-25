@@ -9,11 +9,32 @@ function setupSearch(form) {
   let timer;
   let active = -1;
 
-  function message(text, hidden = false) {
-    status.textContent = text;
-    status.classList.toggle("sds-callout", !hidden);
-    status.dataset.sdsTone = "info";
-    status.classList.toggle("sds-sr-only", hidden);
+  function message(text, state = "info") {
+    status.replaceChildren();
+    status.classList.toggle("sds-callout", state === "info" || state === "error");
+    status.classList.toggle("sds-empty-state", state === "empty");
+    status.classList.toggle("sds-stack", state === "loading");
+    status.classList.toggle("sds-search-loading", state === "loading");
+    status.classList.toggle("sds-sr-only", state === "results");
+    status.dataset.sdsTone = state === "error" ? "danger" : "info";
+    if (state === "loading") {
+      const spinner = document.createElement("span");
+      spinner.className = "sds-spinner";
+      spinner.dataset.sdsSize = "lg";
+      spinner.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.textContent = text;
+      status.append(spinner, label);
+    } else if (state === "empty") {
+      const heading = document.createElement("h2");
+      heading.className = "sds-text-h3";
+      heading.textContent = text;
+      const description = document.createElement("p");
+      description.textContent = "Try a different query.";
+      status.append(heading, description);
+    } else {
+      status.textContent = text;
+    }
   }
 
   function select(index, focus = false) {
@@ -32,13 +53,20 @@ function setupSearch(form) {
   function failure(text) {
     results.replaceChildren();
     results.removeAttribute("aria-busy");
-    message(`${text} Please try again or browse using the navigation.`);
+    select(-1);
+    message(`${text} Please try again or browse using the navigation.`, "error");
   }
 
   function render(data) {
     if (data.id !== requestId) return;
     results.removeAttribute("aria-busy");
     if (data.error) { failure(data.error); return; }
+    if (!data.total) {
+      results.replaceChildren();
+      select(-1);
+      message("No results found.", "empty");
+      return;
+    }
     const list = document.createElement("ul");
     list.className = "sds-list";
     list.append(...data.results.map((result, index) => {
@@ -57,9 +85,7 @@ function setupSearch(form) {
     }));
     results.replaceChildren(list);
     select(data.results.length ? 0 : -1);
-    message(data.total
-      ? `${data.total} matching sections.${data.total > 30 ? " Showing the first 30. Add more words to narrow your search." : ""} Use the arrow keys to navigate and Enter to open a result.`
-      : "No results found. Try a different query.", data.total > 0);
+    message(`${data.total} matching sections.${data.total > 30 ? " Showing the first 30. Add more words to narrow your search." : ""} Use the arrow keys to navigate and Enter to open a result.`, "results");
   }
 
   function run() {
@@ -79,7 +105,7 @@ function setupSearch(form) {
       message("Type a query in the search box above to display a list of results.");
       return;
     }
-    message("Searching…");
+    message("Searching…", "loading");
     results.setAttribute("aria-busy", "true");
     try {
       if (!worker) {
@@ -130,6 +156,22 @@ function setupSearch(form) {
 }
 
 document.querySelectorAll("[data-site-search]").forEach(setupSearch);
+
+for (const tooltip of document.querySelectorAll(".sds-app-masthead sds-tooltip")) {
+  const trigger = tooltip.firstElementChild;
+  const content = tooltip.lastElementChild;
+  const update = () => {
+    const label = trigger.getAttribute("aria-label");
+    if (content.textContent !== label) content.textContent = label;
+    trigger.removeAttribute("title");
+  };
+  // The SDS theme action rewrites native titles as well as accessible labels.
+  new MutationObserver(update).observe(trigger, {
+    attributes: true,
+    attributeFilter: ["aria-label", "title"],
+  });
+  update();
+}
 
 document.addEventListener("keydown", (event) => {
   if (event.altKey || event.shiftKey || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;

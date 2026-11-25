@@ -25,7 +25,7 @@ try {
   assert.notEqual(withHomeNavigation, siteConfig);
   const childRouteConfig = withHomeNavigation.replace("title = 'Code examples', path = '/'", "title = 'Code examples', path = '/components/'");
   assert.notEqual(childRouteConfig, siteConfig);
-  await writeFile(siteTomlPath, childRouteConfig.replace("{ title = 'Examples', children = [", "{ title = 'Examples', path = '/', children = ["));
+  await writeFile(siteTomlPath, childRouteConfig.replace("{ title = 'Examples', children = [", "{ title = 'Examples', path = '/', children = [") + "\nrepository = 'https://github.com/example/docs'\n");
   await writeFile(join(root, "content/index.md"), `# Code examples
 
 Interactive example regression tests.
@@ -142,6 +142,33 @@ Additional reference notes.
       await skip.press("Enter");
       assert.equal(await components.locator("#site-main").evaluate(element => document.activeElement === element), true);
       assert.equal(await components.locator("#site-main").evaluate(element => getComputedStyle(element).outlineStyle), "none");
+      const previous = components.getByRole("link", { name: "Previous page", exact: true });
+      assert.equal(await previous.getAttribute("class"), "sds-button");
+      assert.equal(await previous.getAttribute("data-sds-density"), "compact");
+      assert.deepEqual(await previous.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { height: element.getBoundingClientRect().height, fontSize: style.fontSize };
+      }), { height: 32, fontSize: "14px" });
+      await components.emulateMedia({ reducedMotion: "reduce" });
+      for (const state of ["hover", "pressed"]) {
+        await previous.hover();
+        if (state === "pressed") await components.mouse.down();
+        await components.waitForFunction(element => {
+          const expected = document.createElement("span");
+          expected.style.color = "var(--sds-button-hover-color)";
+          element.append(expected);
+          const matches = getComputedStyle(element).color === getComputedStyle(expected).color;
+          expected.remove();
+          return matches;
+        }, await previous.elementHandle());
+        assert.equal(await previous.locator("svg").evaluate(element => getComputedStyle(element).stroke),
+          await previous.evaluate(element => getComputedStyle(element).color));
+        if (state === "pressed") {
+          await components.mouse.move(0, 0);
+          await components.mouse.up();
+        }
+      }
+      await components.mouse.move(0, 0);
       const table = components.locator("article table");
       const score = table.getByRole("button", { name: "Sort by Score", exact: true });
       await score.waitFor({ state: "visible" });
@@ -216,6 +243,63 @@ Additional reference notes.
   await components.close();
   const page = await context.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(url);
+  const mastheadTooltips = page.locator(".sds-app-masthead sds-tooltip");
+  assert.equal(await mastheadTooltips.count(), 3);
+  for (const tooltip of await mastheadTooltips.all()) {
+    const control = tooltip.locator(":scope > .sds-button");
+    const content = tooltip.locator(":scope > [role='tooltip']");
+    await control.hover();
+    await content.waitFor({ state: "visible" });
+    assert.equal(await content.innerText(), await control.getAttribute("aria-label"));
+    assert.equal(await control.getAttribute("title"), null);
+    await page.keyboard.press("Escape");
+    await content.waitFor({ state: "hidden" });
+    await control.focus();
+    await content.waitFor({ state: "visible" });
+    assert.equal(await control.getAttribute("aria-describedby"), await content.getAttribute("id"));
+    await page.keyboard.press("Escape");
+  }
+  const theme = page.locator("[data-sds-action='toggle-color-scheme']");
+  const themeTooltip = theme.locator("..").locator("[role='tooltip']");
+  for (const label of ["Switch to light mode", "Switch to dark mode"]) {
+    await theme.click();
+    await page.waitForFunction(label => {
+      const control = document.querySelector("[data-sds-action='toggle-color-scheme']");
+      return control.getAttribute("aria-label") === label && !control.hasAttribute("title") && control.parentElement.querySelector("[role='tooltip']").textContent === label;
+    }, label);
+    assert.equal(await themeTooltip.innerText(), label);
+    await themeTooltip.waitFor({ state: "hidden" });
+    assert.equal(await theme.evaluate(element => element === document.activeElement), true, "Tooltip dismissal must preserve button focus");
+    const themeBox = await theme.boundingBox();
+    await page.mouse.move(themeBox.x + themeBox.width / 2 + 2, themeBox.y + themeBox.height / 2);
+    assert.equal(await themeTooltip.isVisible(), false, "Moving within an activated button must not reopen its tooltip");
+    const neighborTooltip = label === "Switch to light mode"
+      ? page.locator("[data-search-open]").locator("..")
+      : mastheadTooltips.first();
+    await neighborTooltip.locator(":scope > .sds-button").hover({ steps: 8 });
+    await neighborTooltip.locator(":scope > [role='tooltip']").waitFor({ state: "visible" });
+    assert.equal(await themeTooltip.isVisible(), false, "Hovering Search or GitHub must not retain the clicked theme tooltip");
+    assert.equal(await mastheadTooltips.locator("[role='tooltip']:popover-open").count(), 1);
+    await page.mouse.move(0, 0);
+    assert.equal(await themeTooltip.isVisible(), false, "Activated tooltips must stay dismissed after the pointer leaves");
+  }
+  await page.evaluate(() => {
+    localStorage.removeItem("sds-color-scheme");
+    document.body.dataset.sdsColorScheme = "system";
+  });
+  for (const [colorScheme, label] of [["dark", "Switch to light mode"], ["light", "Switch to dark mode"]]) {
+    await page.emulateMedia({ colorScheme });
+    await page.waitForFunction(label => {
+      const control = document.querySelector("[data-sds-action='toggle-color-scheme']");
+      return control.getAttribute("aria-label") === label && !control.hasAttribute("title") && control.parentElement.querySelector("[role='tooltip']").textContent === label;
+    }, label);
+  }
+  await page.mouse.move(0, 0);
+  await theme.blur();
+  const next = page.getByRole("link", { name: "Next page", exact: true });
+  assert.equal(await next.getAttribute("class"), "sds-button");
+  assert.equal(await next.getAttribute("data-sds-density"), "compact");
+  assert.equal(await next.evaluate(element => element.getBoundingClientRect().height), 32);
   assert.equal(await page.locator(".sds-app-footer > p[data-sds-margin='none']").count(), 0);
   assert.equal(await page.getByRole("link", { name: "Acknowledgments", exact: true }).count(), 0);
   assert.equal(await page.getByRole("dialog", { name: "Design system acknowledgments" }).count(), 0);
@@ -508,6 +592,7 @@ Additional reference notes.
   await page.keyboard.press("Escape");
   const noScript = await browser.newPage({ javaScriptEnabled: false });
   await noScript.goto(url);
+  assert.equal(await noScript.locator(".sds-app-masthead [role='tooltip']:visible").count(), 0);
   assert.equal(await noScript.locator(".sds-app-toc a[href^='#']").count(), 8);
   assert.equal(await noScript.getByRole("link", { name: "Implementation details", exact: true }).count(), 0);
   assert.equal(await noScript.getByRole("heading", { name: "Implementation details", exact: true }).isVisible(), true);

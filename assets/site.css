@@ -1,3 +1,13 @@
 .sds-app .sds-prose {
   overflow-wrap: anywhere;
 }
+
+.sds-dialog .sds-empty-state {
+  color: var(--sds-color-text-default);
+}
+
+.sds-search-loading {
+  align-items: center;
+  padding-block: var(--sds-space-2xl);
+  text-align: center;
+}

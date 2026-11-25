@@ -183,7 +183,7 @@ fn shell(
     let description = escape(description);
     let home = escape(&config.href("/"));
     let repository_link = config.repository.as_ref().map(|repository| format!(
-        r#"<a class="sds-button" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" href="{}" aria-label="View source" title="View source">{}</a>"#,
+        r#"<sds-tooltip placement="block-end" size="auto"><a class="sds-button" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" href="{}" aria-label="View source">{}</a><span role="tooltip" popover="manual">View source</span></sds-tooltip>"#,
         escape(repository.as_str()), if repository.host_str() == Some("github.com") { crate::markup::documentation_icon("github").to_owned() } else { crate::markup::code_icon("code-xml") }
     )).unwrap_or_default();
     let navigation = if page.is_some() {
@@ -282,10 +282,10 @@ fn shell(
 <a href="https://sei.cmu.edu" aria-label="Software Engineering Institute"><span class="sds-sei-wordmark" aria-hidden="true"></span></a>
 <div class="sds-cluster" data-sds-gap="sm">
 {repository_link}
-<button class="sds-button" type="button" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" data-sds-action="toggle-color-scheme" aria-pressed="false" aria-label="Switch to dark mode" title="Switch to dark mode">{theme_icons}</button>
-<a class="sds-button" href="{search_url}" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" data-search-open aria-haspopup="dialog" aria-controls="site-search-dialog" aria-label="Search documentation" title="Search documentation">
+<sds-tooltip placement="block-end" size="auto"><button class="sds-button" type="button" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" data-sds-action="toggle-color-scheme" aria-pressed="false" aria-label="Switch to dark mode">{theme_icons}</button><span role="tooltip" popover="manual">Switch to dark mode</span></sds-tooltip>
+<sds-tooltip placement="block-end" size="auto"><a class="sds-button" href="{search_url}" data-sds-shape="icon" data-sds-size="sm" data-sds-density="compact" data-sds-variant="text" data-search-open aria-haspopup="dialog" aria-controls="site-search-dialog" aria-label="Search documentation">
 {search_icon}
-</a>
+</a><span role="tooltip" popover="manual">Search documentation</span></sds-tooltip>
 </div>
 </div>
 <header class="sds-app-header">
@@ -311,7 +311,7 @@ fn shell(
 <p data-sds-margin="none" data-sds-padding-block-start="lg">{name} was created using the SEI Design System. <a href="{license}">Design system license and acknowledgments</a>.</p>
 </footer>
 <dialog id="site-search-dialog" class="sds-dialog" data-sds-width="lg" closedby="any" aria-labelledby="site-search-title">
-<div class="sds-dialog-header"><h2 id="site-search-title" class="sds-text-h3">Search</h2>
+<div class="sds-dialog-header"><h2 id="site-search-title" class="sds-text-title">Search</h2>
 <button class="sds-button" type="button" data-sds-shape="icon" data-sds-variant="text" commandfor="site-search-dialog" command="close" data-search-close aria-label="Close documentation search">&times;</button></div>
 {dialog_form}
 </dialog>
@@ -346,7 +346,7 @@ fn search_form(site: &Site, prefix: &str, sync_url: bool) -> String {
 <div class="sds-field"><label class="sds-sr-only" for="{prefix}-query">Search all pages</label>
 <input class="sds-input" id="{prefix}-query" name="q" type="text" role="searchbox" inputmode="search" maxlength="200" required autocomplete="off" {autofocus} placeholder="Search all pages" aria-controls="{prefix}-results" aria-describedby="{prefix}-status"></div>
 </form>
-<p id="{prefix}-status" role="status" aria-live="polite">Type a query in the search box above to display a list of results.</p>
+<div id="{prefix}-status" role="status" aria-live="polite" aria-atomic="true">Type a query in the search box above to display a list of results.</div>
 <nav id="{prefix}-results" class="sds-search-results" aria-label="Search results"></nav>"#,
         action = escape(&site.config.href("/search/")),
         autofocus = if sync_url { "" } else { "autofocus" }
@@ -553,7 +553,7 @@ fn page_navigation(site: &Site, current: &Page) -> String {
         .checked_sub(1)
         .map(|index| {
             format!(
-                "<a href=\"{}\" rel=\"prev\">{}Previous page</a>",
+                "<a class=\"sds-button\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-tone=\"neutral\" href=\"{}\" rel=\"prev\">{}Previous page</a>",
                 escape(&site.config.href(&pages[index].route)),
                 crate::markup::code_icon("chevron-left")
             )
@@ -563,7 +563,7 @@ fn page_navigation(site: &Site, current: &Page) -> String {
         .get(index + 1)
         .map(|page| {
             format!(
-                "<a href=\"{}\" rel=\"next\">Next page{}</a>",
+                "<a class=\"sds-button\" data-sds-density=\"compact\" data-sds-variant=\"text\" data-sds-tone=\"neutral\" href=\"{}\" rel=\"next\">Next page{}</a>",
                 escape(&site.config.href(&page.route)),
                 crate::markup::code_icon("chevron-right")
             )
