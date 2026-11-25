@@ -1,21 +1,21 @@
 # Bundled SDS Lite
 
 - Upstream: https://github.com/cmu-sei/sds-lite
-- Release: [v0.9.0](https://github.com/cmu-sei/sds-lite/releases/tag/v0.9.0),
-  published 2026-11-24.
-- Source commit: `ab7f0cecd096708acd52bcb6da789a3ac67b915e`.
-- Verified against the latest stable release: 2026-11-24.
+- Release: [v0.11.0](https://github.com/cmu-sei/sds-lite/releases/tag/v0.11.0),
+  published 2026-11-25.
+- Source commit: `ea3faae607fb6425a6f27752452dd3288352baee`.
+- Verified against the latest stable release: 2026-11-25.
 - Source archive:
-  https://codeload.github.com/cmu-sei/sds-lite/tar.gz/ab7f0cecd096708acd52bcb6da789a3ac67b915e
+  https://codeload.github.com/cmu-sei/sds-lite/tar.gz/ea3faae607fb6425a6f27752452dd3288352baee
 - Source archive SHA-256:
-  `85b745ff8eca42fb47d6e17ed3f209e4a928d61fb57f37f787ee8707af6201e3`.
+  `bb91afb9a4f2216401cc62edb17a6c603b23e32f0b8f220a165cf3548f2901ea`.
 - License: see [LICENSE](LICENSE). Generated sites continue to bundle the
   required design-system license files.
 
 All eight bundled files are byte-for-byte identical to this release's source
-archive. The previous local testing snapshot already matched v0.9.0; replacing
-it with the verified release files changed provenance without changing asset
-bytes or behavior. No local patches are applied.
+archive. This production release replaces the temporary local testing snapshot
+and includes the tooltip focus-restoration and hover-lifecycle fixes. No local
+patches are applied.
 
 ## Source files
 

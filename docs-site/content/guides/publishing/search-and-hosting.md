@@ -61,6 +61,10 @@ Clear stale HTML/search assets or try a clean browser session when troubleshooti
    and same-origin search-data requests.
 
 Search errors are displayed in the interface.
+Search uses a loading spinner while a query runs, an empty state when no
+sections match, and a danger callout when search data cannot be loaded.
+Status updates are announced to assistive technology; successful result counts
+remain available without adding visual clutter.
 
 ## Offline and restricted networks
 

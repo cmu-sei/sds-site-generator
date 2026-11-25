@@ -118,6 +118,13 @@ Component tests also check generated table cell insets, outer-border removal,
 and preserved row separators in light/dark mode at desktop and mobile widths.
 They verify content spacing and that skip navigation focuses the main content
 without outlining the reading region.
+Previous/next page links use SDS Lite's compact text buttons; browser
+checks verify their compact dimensions and hover/pressed text and icon colors.
+Masthead icon controls use SDS tooltips, and search uses SDS dialog titles,
+spinners, empty states, and error callouts with accessible status updates.
+Search loading uses a centered large SDS spinner with its status label beneath it.
+Search dialog headings use `sds-text-title`; no-results headings use
+`sds-text-h3`, matching the SDS Lite empty-state example.
 Syntax highlighting initializes only the language grammar groups used on each
 page, including their embedded-language dependencies, instead of compiling every
 supported language during page load.
@@ -130,6 +137,8 @@ all three reports and a median-performance report for each route.
 
 SDS Lite assets are pinned and bundled locally. See
 [provenance and update details](vendor/sds-lite/PROVENANCE.md).
+Do not patch vendored SDS Lite code. Fix SDS Lite upstream, then update the
+complete verified release bundle.
 
 ## License
 
